@@ -1,6 +1,6 @@
 classdef FourBarLinkage
     properties
-        linkage(2,4)        {mustBeReal, mustBeFinite} % First row is lengths, second row is angle [radians]; NaN for solution variables
+        linkage(2,4)        {mustBeReal} % First row is lengths, second row is angle [radians]; NaN for solution variables
 %         %Lengths(1,4) double {mustBeReal, mustBeFinite}
 %         %Angles(1,4) double {mustBeReal, mustBeFinite    % Angle in radians
 %         changingVars(2,4) {mustBeInteger}             % Bool 2:4 array
@@ -26,7 +26,7 @@ classdef FourBarLinkage
             end
             
             % Determine the array row & col of unknowns
-            unknowns = isNaN(linkage);
+            unknowns = isnan(linkage);
             if (length(unknowns(unknowns==1)) > 2)
                 disp("Too many unknowns")
                 return
@@ -35,7 +35,7 @@ classdef FourBarLinkage
             obj.drivingVar = drivingVar;
             
             % ID unknown coordinates
-            if (isEmpty(find(unknowns(1,:))))       % ==> Both unknowns are lengths
+            if (isempty(find(unknowns(1,:))))       % ==> Both unknowns are lengths
                 unknownIndexes = find(unknowns(2,:));
                 obj.unknownPos1 = [1, unknownIndexes(1)];
                 obj.unknownPos2 = [1, unknownIndexes(2)];
@@ -48,8 +48,10 @@ classdef FourBarLinkage
                 obj.unknownPos2 = [1, find(unknowns(2,:))];     %angle
             end
         end
-        function unknowns = CalcLinkage(obj,drivingVarValue,drivingVar) % Use this function to calculate a linkage position
+        
+        function [unknown1, unknown2] = CalcLinkage(obj,drivingVarValue,drivingVar) % Use this function to calculate a linkage position
             if (nargin < 2)
+                disp("ERROR: Not Enough Argiments")
                 return
             elseif (nargin == 2)
                 drivingVar = obj.drivingVar;
@@ -59,7 +61,8 @@ classdef FourBarLinkage
             obj.linkage(drivingVar(1),drivingVar(2)) = drivingVarValue;     % Change driving Var Value as requested
             
             Xtemp = fsolve(@LinkageEqn, obj.priorGuesses, obj.opt);
-            unknowns = Xtemp;
+            unknown1 = Xtemp(1);
+            unknown2 = Xtemp(2);
         end
         
         function out = LinkageEqn(obj)      % Function defined using the geometry values defined 

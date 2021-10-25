@@ -19,7 +19,7 @@ motion_ratio = 1.0
 %% Setup
 % clc;clear;close all
 D2R = pi/180;    %deg 2 radians
-R2D = 180/p;
+R2D = 180/pi;
 
 % Suspension Linkage: Theta 3 drives the linkage, Theta 1 and all lengths are fixed.
 
@@ -32,7 +32,7 @@ r3 = 381;
 r4 = 190.5;
 
 initGuesses = [10*D2R,90*D2R]; %Theta 2 and Theta 4 initial guesses
-linkage = FourBarLinkage([r1 r2 r3 r4 r5; Th1 NaN Th3 NaN], [2,3], initGuesses);
+linkage = FourBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], initGuesses);
 
 VTh3 = linspace(-7.5,7.5)*D2R; % VTh3 is array of Theta3 angles to iterate over
 VTh1 = ones(1,length(VTh3))*Th1;
@@ -40,17 +40,8 @@ VTh2 = zeros(1,length(VTh3));
 VTh4 = zeros(1,length(VTh3));
 
 
-[Th2,Th4] = calcLinkage(linkage);
+[Th2,Th4] = CalcLinkage(linkage,Th3);
 
-
-% Initial guesses for Theta3 and Theta4 
-% when Theta2=0 
-Th3 = 90*D2R;  Th4 = 270*D2R; 
-Xinit=[Th3 Th4];  % Vector of guesses
-VTh3 = zeros(1,length(VTh3)); % Predefine
-VTh4 = zeros(1,length(VTh3)); % vectors
-opt = optimset('Display', 'off'); 
-%%% End Setup
 
 %% Loop through every position
 
@@ -59,7 +50,7 @@ for k=1:(length(VTh3))/2
 % Solving for Position
   Th3 = VTh3(k);
   [Xtemp, fval] = fsolve(@PosEq5bar,Xinit,opt);
-  Rem(k)=sqrt(fval(1)^2+fval(2)^2);  
+  %Rem(k)=sqrt(fval(1)^2+fval(2)^2);  
   Th3=Xtemp(1); % Split off solutions
   Th4=Xtemp(2);
   VTh3(k)=Th3;  % Store solutions to vector
@@ -67,20 +58,6 @@ for k=1:(length(VTh3))/2
   % Use last solution for next guess
   Xinit=[Th3,Th4];
 end  % End loop through every position
-
-
-%Changing Theta 5 Values
-for k=(length(VTh5)/2):length(VTh5)
-  Th5 = VTh5(k);
-  [Xtemp, fval] = fsolve(@PosEq5bar,Xinit,opt);
-  Rem(k)=sqrt(fval(1)^2+fval(2)^2);  
-  Th3=Xtemp(1); % Split off solutions
-  Th4=Xtemp(2);
-  VTh3(k)=Th3;  % Store solutions to vector
-  VTh4(k)=Th4;
-  % Use last solution for next guess
-  Xinit=[Th3,Th4];
-end
 %%% End loops
 
 
@@ -93,31 +70,23 @@ Ox = zeros(1,length(VTh3));
 % y position of the origin
 Oy = zeros(1,length(VTh3));
 % x coordinate for point B
-Bx = real(r1*exp(1i*Th1*ones(length(VTh3)) ));
+Bx = Ox + real(r1*exp(1i*Th1*ones(length(VTh3)) ));
 % y coordinate for point B
-By = imag(r1*exp(1i*Th1*ones(length(VTh3)) ));
+By = Oy + imag(r1*exp(1i*Th1*ones(length(VTh3)) ));
 % x coordinate for point C
-Cx = real(r2*exp(1i*VTh3));
+Cx = Ox + real(r3*exp(1i*VTh3));
 % y coordinate for point C
-Cy = imag(r2*exp(1i*VTh3));
+Cy = Oy + imag(r3*exp(1i*VTh3));
 % x coordinate for for point D
-Dx = real(r3*exp(1i*VTh3))+Cx;
+Dx = Cx + real(r4*exp(1i*VTh2));
 % y coordinate for for point D
-Dy = imag(r3*exp(1i*VTh3))+Cy;
-% x coordinate for point D
-Ex = real(r4*exp(1i*VTh4))+Dx;
-% x coordinate for point D
-Ey = imag(r4*exp(1i*VTh4))+Dy; 
-% x coordinate for point E
-Gx = real(lr6*exp(1i*(VTh4+Th_GED)))+Ex;
-% y coordinate for point E
-Gy = imag(lr6*exp(1i*(VTh4+Th_GED)))+Ey; 
+Dy = Cy + imag(r4*exp(1i*VTh2));
 
 % Find Plot Limits
-xmin = min([min(Ox) min(Bx) min(Cx) min(Dx) min(Ex) min(Gx)]);
-xmax = max([max(Ox) max(Bx) max(Cx) max(Dx) max(Ex) max(Gx)]);
-ymin = min([min(Oy) min(By) min(Cy) min(Dy) min(Ey) min(Gy)]);
-ymax = max([max(Oy) max(By) max(Cy) max(Dy) max(Ey) max(Gy)]);
+xmin = min([min(Ox) min(Bx) min(Cx) min(Dx)]);
+xmax = max([max(Ox) max(Bx) max(Cx) max(Dx)]);
+ymin = min([min(Oy) min(By) min(Cy) min(Dy)]);
+ymax = max([max(Oy) max(By) max(Cy) max(Dy)]);
 % Calculate plot gap space
 Space=0.03*max([abs(xmin) abs(xmax) ...
                 abs(ymin) abs(ymax)]);
@@ -130,13 +99,15 @@ ymax = ymax+Space;
 % Mechanism Animation
 figure()%'WindowState','maximized') % Large Figure
 for t=1:length(VTh3)
-    bar2x=[Ox(t) Cx(t)]; % Coordinates Link 2
-    bar2y=[Oy(t) Cy(t)];
-    bar3x=[Cx(t) Dx(t)]; % Coordinates Link 3
-    bar3y=[Cy(t) Dy(t)];
-    bar4x=[Dx(t) Ex(t)]; % Coordinates Link 4
-    bar4y=[Dy(t) Ey(t)]; 
-    plot(bar2x,bar2y,bar3x,bar3y,bar4x,bar4y,'LineWidth',2);   
+    bar1x=[Ox(t) Bx(t)]; % Coordinates Link 2
+    bar1y=[Oy(t) By(t)];
+    bar2x=[Bx(t) Dx(t)]; % Coordinates Link 2
+    bar2y=[By(t) Dy(t)];
+    bar3x=[Ox(t) Cx(t)]; % Coordinates Link 3
+    bar3y=[Oy(t) Cy(t)];
+    bar4x=[Cx(t) Dx(t)]; % Coordinates Link 4
+    bar4y=[Cy(t) Dy(t)]; 
+    plot(bar1x,bar1y,bar2x,bar2y,bar3x,bar3y,bar4x,bar4y,'LineWidth',2);   
     axis equal   % Equal scale of x and y-axis 
     axis([xmin xmax ymin ymax]);
     M(t)=getframe; % For assembling movie frames
