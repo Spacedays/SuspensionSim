@@ -1,0 +1,165 @@
+
+
+%% Roll Center Calculations
+
+
+%% Pull Rod Calculations
+
+%% Setup
+motion_ratio = 1.0
+
+% linkage = FourBarLinkage(
+
+
+
+
+
+%% 
+
+%% Setup
+% clc;clear;close all
+D2R = pi/180;    %deg 2 radians
+R2D = 180/p;
+
+% Suspension Linkage: Theta 3 drives the linkage, Theta 1 and all lengths are fixed.
+
+
+Th1 = acos(80.83/137.5);
+Th3 = 0   % Driving Input Starting Value ((var will be iterated over))
+r1 = 159.56;    % mm
+r2 = 304.8;
+r3 = 381;
+r4 = 190.5;
+
+linkage = FourBarLinkage([r1 r2 r3 r4 r5; Th1 NaN Th3 NaN], (2,3)]
+% T_deg are portions of a revolution in degrees
+% VTh2 is array of Theta2 angles
+VTh2 = (110:.5:160)*D2R; 
+
+% VTh5 is array of Theta5 angles
+VTh5b(1:101) = 82*D2R;      %Values for theta 5 when theta 2 is changing
+VTh5e = (82:.5:132)*D2R;    %Values to increment theta 5 over
+VTh5 = [VTh5b VTh5e];       %Overall theta 5 values
+
+% Initial guesses for Theta3 and Theta4 
+% when Theta2=0 
+Th3 = 90*D2R;  Th4 = 270*D2R; 
+Xinit=[Th3 Th4];  % Vector of guesses
+VTh3 = zeros(1,length(VTh2)); % Predefine
+VTh4 = zeros(1,length(VTh2)); % vectors
+opt = optimset('Display', 'off'); 
+%%% End Setup
+
+%% Loop through every position
+
+%Changing Theta 2 values
+for k=1:(length(VTh2))/2
+% Solving for Position
+  Th3 = VTh2(k);
+  [Xtemp, fval] = fsolve(@PosEq5bar,Xinit,opt);
+  Rem(k)=sqrt(fval(1)^2+fval(2)^2);  
+  Th3=Xtemp(1); % Split off solutions
+  Th4=Xtemp(2);
+  VTh3(k)=Th3;  % Store solutions to vector
+  VTh4(k)=Th4;
+  % Use last solution for next guess
+  Xinit=[Th3,Th4];
+end  % End loop through every position
+
+
+%Changing Theta 5 Values
+for k=(length(VTh5)/2):length(VTh5)
+  Th5 = VTh5(k);
+  [Xtemp, fval] = fsolve(@PosEq5bar,Xinit,opt);
+  Rem(k)=sqrt(fval(1)^2+fval(2)^2);  
+  Th3=Xtemp(1); % Split off solutions
+  Th4=Xtemp(2);
+  VTh3(k)=Th3;  % Store solutions to vector
+  VTh4(k)=Th4;
+  % Use last solution for next guess
+  Xinit=[Th3,Th4];
+end
+%%% End loops
+
+
+%% Animation
+% Determine the positions of the four 
+% revolute joints at each iteration
+% x Position of the origin
+
+Ox = zeros(1,length(VTh2));
+% y position of the origin
+Oy = zeros(1,length(VTh2));
+% x coordinate for point B
+Bx = real(r1*exp(1i*Th1*ones(length(VTh2)) ));
+% y coordinate for point B
+By = imag(r1*exp(1i*Th1*ones(length(VTh2)) ));
+% x coordinate for point C
+Cx = real(r2*exp(1i*VTh2));
+% y coordinate for point C
+Cy = imag(r2*exp(1i*VTh2));
+% x coordinate for for point D
+Dx = real(r3*exp(1i*VTh3))+Cx;
+% y coordinate for for point D
+Dy = imag(r3*exp(1i*VTh3))+Cy;
+% x coordinate for point D
+Ex = real(r4*exp(1i*VTh4))+Dx;
+% x coordinate for point D
+Ey = imag(r4*exp(1i*VTh4))+Dy; 
+% x coordinate for point E
+Gx = real(lr6*exp(1i*(VTh4+Th_GED)))+Ex;
+% y coordinate for point E
+Gy = imag(lr6*exp(1i*(VTh4+Th_GED)))+Ey; 
+
+% Find Plot Limits
+xmin = min([min(Ox) min(Bx) min(Cx) min(Dx) min(Ex) min(Gx)]);
+xmax = max([max(Ox) max(Bx) max(Cx) max(Dx) max(Ex) max(Gx)]);
+ymin = min([min(Oy) min(By) min(Cy) min(Dy) min(Ey) min(Gy)]);
+ymax = max([max(Oy) max(By) max(Cy) max(Dy) max(Ey) max(Gy)]);
+% Calculate plot gap space
+Space=0.03*max([abs(xmin) abs(xmax) ...
+                abs(ymin) abs(ymax)]);
+% Put equal gap around mechanism plot
+xmin = xmin-Space; 
+xmax = xmax+Space;
+ymin = ymin-Space;
+ymax = ymax+Space;
+
+% Mechanism Animation
+figure()%'WindowState','maximized') % Large Figure
+for t=1:length(VTh2)
+    bar2x=[Ox(t) Cx(t)]; % Coordinates Link 2
+    bar2y=[Oy(t) Cy(t)];
+    bar3x=[Cx(t) Dx(t)]; % Coordinates Link 3
+    bar3y=[Cy(t) Dy(t)];
+    bar4x=[Dx(t) Ex(t)]; % Coordinates Link 4
+    bar4y=[Dy(t) Ey(t)]; 
+    bar5x=[Bx(t) Ex(t)]; % Coordinates Link 5
+    bar5y=[By(t) Ey(t)]; 
+    bar6x=[Ex(t) Gx(t)]; % Coordinates Link 6
+    bar6y=[Ey(t) Gy(t)]; 
+    plot(bar2x,bar2y,bar3x,bar3y,bar4x,bar4y,bar5x,bar5y,bar6x,bar6y,...
+      'LineWidth',2);   
+    axis equal   % Equal scale of x and y-axis 
+    axis([xmin xmax ymin ymax]);
+    M(t)=getframe; % For assembling movie frames
+end
+%%% End Animation
+
+
+    
+%% Function to input to solver
+function out=PosEq5bar(X)
+% Function to solve for position equations
+global Th1 Th2 Th5 lr1 lr2 lr3 lr4 lr5 % Allow access to these variables
+Th3=X(1); Th4=X(2);    % Locally rename solution variables
+
+% Enter in f the complex vector equation for the 
+% position of the links
+f = lr2*exp(1i*Th2) + lr3*exp(1i*Th3) + lr4*exp(1i*Th4) - lr5*exp(1i*Th5) - lr1*exp(1i*Th1);
+
+% The function f describes two equations with real and
+% imaginary parts set to 0 (MATLAB solutions at F=0)
+out=[ real(f);
+    imag(f)];
+end

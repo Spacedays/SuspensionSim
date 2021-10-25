@@ -20,10 +20,7 @@ classdef FourBarLinkage
             % Setup options for fsolve
             obj.opt = optimset('Display','off');
             
-            % Set obj.priorGuesses if provided
-            if (nargin == 3)
-               obj.priorGuesses = initGuesses;
-            end
+            % Set obj.priorGuesses if initGuesses is provided
             
             % Determine the array row & col of unknowns
             unknowns = isNaN(linkage);
