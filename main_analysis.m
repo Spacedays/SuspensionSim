@@ -19,7 +19,7 @@ r3 = 15*25.4;%381;
 r4 = 7.5*25.4;%190.5;
 
 initGuesses = [10*D2R,90*D2R]; %Theta 2 and Theta 4 initial guesses
-linkage = FourBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], initGuesses);
+linkage = NBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], initGuesses);
 
 VTh3 = linspace(-10,10)*D2R; % VTh3 is array of Theta3 angles to iterate over
 VTh1 = ones(1,length(VTh3))*Th1;

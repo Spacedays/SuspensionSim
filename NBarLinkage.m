@@ -1,6 +1,6 @@
-classdef FourBarLinkage
+classdef NBarLinkage
     properties
-        linkage(2,4)        {mustBeReal} % First row is lengths, second row is angle [radians]; NaN for solution variables
+        linkage(2,:)        {mustBeReal} % First row is lengths, second row is angle [radians]; NaN for solution variables
         drivingVar = [2,1]      % coordinate of driving variable
         unknownPos1 = [2 2]     % Row, Col of unknown 1. First row is length, second is angle [rads]
         unknownPos2 = [2 3]
@@ -10,7 +10,7 @@ classdef FourBarLinkage
     % A four bar linkage will have two unknowns, one driving the other.
     
     methods
-        function obj = FourBarLinkage(linkage,drivingVar,initGuesses)   % Constructor
+        function obj = NBarLinkage(linkage,drivingVar,initGuesses)   % Constructor
             % The unknows are defined by NaN values
             
             % Setup options for fsolve
@@ -45,6 +45,25 @@ classdef FourBarLinkage
             end
         end
         
+        function out = LinkageEqn(obj, X)      % Function defined using the geometry values defined 
+            % Updates the unknowns' position to the previous guess
+            obj.linkage(obj.unknownPos1(1),obj.unknownPos1(2)) = X(1);%obj.priorGuesses(1);
+            obj.linkage(obj.unknownPos2(1),obj.unknownPos2(2)) = X(2);%obj.priorGuesses(2);
+            if (max(size(obj.linkage)) == 5)
+            eqn = obj.linkage(1,1).*exp(1i.*obj.linkage(2,1)) + obj.linkage(1,2).*exp(1i.*obj.linkage(2,2)) ...
+                 - obj.linkage(1,3).*exp(1i.*obj.linkage(2,3)) - obj.linkage(1,4).*exp(1i.*obj.linkage(2,4));
+            end
+            if (max(size(obj.linkage)) == 4)
+            eqn = obj.linkage(1,1).*exp(1i.*obj.linkage(2,1)) + obj.linkage(1,2).*exp(1i.*obj.linkage(2,2)) ...
+                 - obj.linkage(1,3).*exp(1i.*obj.linkage(2,3)) - obj.linkage(1,4).*exp(1i.*obj.linkage(2,4));
+            end
+            if (max(size(obj.linkage)) == 3)
+            eqn = obj.linkage(1,1).*exp(1i.*obj.linkage(2,1)) + obj.linkage(1,2).*exp(1i.*obj.linkage(2,2)) ...
+                 - obj.linkage(1,3).*exp(1i.*obj.linkage(2,3));
+            end
+            out = [real(eqn); imag(eqn)];
+        end
+        
         function [unknown1, unknown2] = CalcLinkage(obj,drivingVarValue,drivingVar) % Use this function to calculate a linkage position
             if (nargin < 2)
                 disp("ERROR: Not Enough Argiments")
@@ -63,15 +82,8 @@ classdef FourBarLinkage
             unknown2 = Xtemp(2);
         end
         
-        function out = LinkageEqn(obj, X)      % Function defined using the geometry values defined 
-            % Updates the unknowns' position to the previous guess
-            obj.linkage(obj.unknownPos1(1),obj.unknownPos1(2)) = X(1);%obj.priorGuesses(1);
-            obj.linkage(obj.unknownPos2(1),obj.unknownPos2(2)) = X(2);%obj.priorGuesses(2);
+        function CalcRange(obj,drivingVarVector,drivingVar)
             
-            eqn = obj.linkage(1,1).*exp(1i.*obj.linkage(2,1)) + obj.linkage(1,2).*exp(1i.*obj.linkage(2,2)) ...
-                 - obj.linkage(1,3).*exp(1i.*obj.linkage(2,3)) - obj.linkage(1,4).*exp(1i.*obj.linkage(2,4));
-            out = [real(eqn); imag(eqn)];
         end
-        
     end
 end
