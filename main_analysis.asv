@@ -44,8 +44,8 @@ end
 %% Pull Rod Calculations
 motion_ratio = 1.0;
 rocker_origin = [-15.4,40.8];   % x,y wrt lower right A-arm mount [mm] 
-rocker_pull_radius = 1.5*25.4;   	% [mm]
-l_pullrod = 17*25.4;  
+rocker_pull_radius = 80;   	% [mm]
+l_pullrod = 16.5*25.4;  
 
 
 
@@ -71,29 +71,22 @@ Fy = Dy;    % y coordinate for for point F
 l_OrF = sqrt((Fx-Orx).^2 - (Fy-Ory).^2);    % distance from rocker origin to pull rod attachment point
 %th_IF = acos((rocker_pull_radius.^2 - l_pullrod.^2 - l_OrF.^2)./(-2 .* l_pullrod .* l_OrF));   % angle EFO2
 th_F = atan((Fy-Ory)./(Fx-Orx));
-th_O = real(acos((l_pullrod.^2 - l_OrF.^2 - rocker_pull_radius.^2)./(-2*l_OrF*rocker_pull_radius)));
-th_E = pi/2 - (th_O + th_F);
 %th_HF = th_IF + th_F;
 
 %Ex = Fx - l_pullrod*cos(th_HF);
 %Ey = Fy - l_pullrod*sin(th_HF);
-Ex = Orx - rocker_pull_radius*cos(th_E);
-Ey = Ory + rocker_pull_radius*sin(th_E);
-
 
 % Ex = Orx ;         % x coordinate for point E
 % Ey = Oy + rocker_origin(2);         % y coordinate for point E
 
 
 %% Camber Calcs
-figure(1)
+figure(2)
 grid on
 title("Camber vs Bump")
-camber = atand((Dx-Cx)./(Dy-Cy));
-bump = r3*sin(VTh3);
+camber = atand((Dx-Cx)./(Dy-Cy))
+bump = r3*sin(VTh3)
 plot(bump,camber)
-
-%% Motion Ratio Calcs
 
 
 %% Animation
@@ -121,7 +114,7 @@ ymin = ymin-Space;
 ymax = ymax+Space;
 
 % Mechanism Animation
-figure(2)%'WindowState','maximized') % Large Figure
+figure(1)%'WindowState','maximized') % Large Figure
 grid on
 for t=1:length(VTh3)
     bar1x=[Ox(t) Bx(t)]; % Coordinates Link 1
