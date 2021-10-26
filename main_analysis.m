@@ -1,31 +1,24 @@
 
-
+clc;clear;close all
 %% Roll Center Calculations
-
+% TBD
 
 %% Pull Rod Calculations
 
 %% Setup
 motion_ratio = 1.0
-
-% linkage = FourBarLinkage(
-
+% Motion ratio calcs TBD
 
 
-
-
-%% 
-
-%% Setup
+%% Kinematics Setup
 % clc;clear;close all
 D2R = pi/180;    %deg 2 radians
 R2D = 180/pi;
 
 % Suspension Linkage: Theta 3 drives the linkage, Theta 1 and all lengths are fixed.
 
-
 Th1 = acos(80.83/137.5);
-Th3 = 0   % Driving Input Starting Value ((var will be iterated over))
+Th3 = 0;   % Driving Input Starting Value ((var will be iterated over))
 r1 = 159.56;    % mm
 r2 = 304.8;
 r3 = 381;
@@ -40,23 +33,22 @@ VTh2 = zeros(1,length(VTh3));
 VTh4 = zeros(1,length(VTh3));
 
 
-[Th2,Th4] = CalcLinkage(linkage,Th3);
-
-
 %% Loop through every position
 
 %Changing Theta 2 values
-for k=1:(length(VTh3))/2
+for k=1:(length(VTh3))
 % Solving for Position
   Th3 = VTh3(k);
-  [Xtemp, fval] = fsolve(@PosEq5bar,Xinit,opt);
+  [Th2,Th4] = CalcLinkage(linkage,Th3);
   %Rem(k)=sqrt(fval(1)^2+fval(2)^2);  
-  Th3=Xtemp(1); % Split off solutions
-  Th4=Xtemp(2);
-  VTh3(k)=Th3;  % Store solutions to vector
+%   Th2=Xtemp(1); % Split off solutions
+%   Th4=Xtemp(2);
+  VTh2(k)=Th2;  % Store solutions to vector
   VTh4(k)=Th4;
   % Use last solution for next guess
-  Xinit=[Th3,Th4];
+  obj.priorGuesses(1) = Th2;
+  obj.priorGuesses(2) = Th4;
+%   Xinit=[Th2,Th4];
 end  % End loop through every position
 %%% End loops
 
@@ -78,9 +70,9 @@ Cx = Ox + real(r3*exp(1i*VTh3));
 % y coordinate for point C
 Cy = Oy + imag(r3*exp(1i*VTh3));
 % x coordinate for for point D
-Dx = Cx + real(r4*exp(1i*VTh2));
+Dx = Cx + real(r4*exp(1i*VTh4));
 % y coordinate for for point D
-Dy = Cy + imag(r4*exp(1i*VTh2));
+Dy = Cy + imag(r4*exp(1i*VTh4));
 
 % Find Plot Limits
 xmin = min([min(Ox) min(Bx) min(Cx) min(Dx)]);
@@ -97,7 +89,8 @@ ymin = ymin-Space;
 ymax = ymax+Space;
 
 % Mechanism Animation
-figure()%'WindowState','maximized') % Large Figure
+figure(1)%'WindowState','maximized') % Large Figure
+grid on
 for t=1:length(VTh3)
     bar1x=[Ox(t) Bx(t)]; % Coordinates Link 2
     bar1y=[Oy(t) By(t)];
