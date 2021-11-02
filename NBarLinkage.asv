@@ -124,27 +124,27 @@ classdef NBarLinkage
                 thVectors(k,:) = thVectors(k) .* obj.linkage(2,k);
             end
             
-%             switch obj.drivingVar(1)
-%                 case 1
-%                     rVectors(obj.drivingVar(1),:) = drivingVarVector;
-%                 case 2
-%                     thVectors(obj.drivingVar(1),:) = drivingVarVector;
-%             end
+            switch obj.drivingVar(1)
+                case 1
+                    rVectors(obj.drivingVar(1),:) = drivingVarVector;
+                case 2
+                    thVectors(obj.unknownPos2(1),:) = solVectors(1,:);
+            end
             
             solVectors = CalcSoltnRange(obj,drivingVarVector);
             
             % Set 
             switch obj.unknownPos1(1)
                 case 1
-                    rVectors(obj.unknownPos1(2),:) = solVectors(1,:);
+                    rVectors(obj.unknownPos1(1),:) = solVectors(1,:);
                 case 2
-                    thVectors(obj.unknownPos1(2),:) = solVectors(1,:);
+                    thVectors(obj.unknownPos1(1),:) = solVectors(1,:);
             end
             switch obj.unknownPos2(1)
                 case 1
-                    rVectors(obj.unknownPos2(2),:) = solVectors(2,:);
+                    rVectors(obj.unknownPos2(1),:) = solVectors(1,:);
                 case 2
-                    thVectors(obj.unknownPos2(2),:) = solVectors(2,:);
+                    thVectors(obj.unknownPos2(1),:) = solVectors(1,:);
             end
             
             
