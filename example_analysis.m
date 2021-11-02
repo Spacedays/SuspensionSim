@@ -29,15 +29,37 @@ VTh3 = linspace(-10,10)*D2R; % VTh3 is array of Theta3 angles to iterate over
 %% Kinematics setup options -- Use only one of the three options
 
 %%% Kinematics using CalcLinkageRange
-[~, thVectors] = CalcLinkageRange(linkage,VTh3);    % rVectors not used here
+[rVectors, thVectors] = CalcLinkageRange(linkage,VTh3);
 VTh1 = thVectors(1,:);
 VTh2 = thVectors(2,:);
 % VTh3 = thVectors(3,:);    % Th3 is already set so no need to re-set it, but it remains the same so it doesn't matter either way
 VTh4 = thVectors(4,:);
 
+
+%%% Kinematics using CalcSoltnRange
+% solVectors = CalcSoltnRange(linkage,VTh3);
+% VTh1 = ones(1,length(VTh3))*Th1;
+% VTh2 = solVectors(1,:);
+% VTh4 = solVectors(2,:);
+
+%%% Kinematics using CalcLinkage
+% VTh1 = ones(1,length(VTh3))*Th1;
+% VTh2 = zeros(1,length(VTh3));
+% VTh4 = zeros(1,length(VTh3));
+% 
+% %Iterate over driving variable
+% for k=1:(length(VTh3))
+% % Solving for Position
+%   Th3 = VTh3(k);
+%   [Th2,Th4] = CalcLinkage(linkage,Th3);
+%   VTh2(k)=Th2;                  % Store solutions to vector
+%   VTh4(k)=Th4;
+%   obj.priorGuesses(1) = Th2;    % Use last solution for next guess
+%   obj.priorGuesses(2) = Th4;
+% end
 % %%% End loops
 
-%% Plotting and Pull Rod Calculations -- Pull Rod calcs TBD
+%% Pull Rod Calculations
 motion_ratio = 1.0;
 rocker_origin = [-15.4,40.8];   % x,y wrt lower right A-arm mount [mm] 
 rocker_pull_radius = 1.5*25.4;   	% [mm]
