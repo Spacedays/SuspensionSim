@@ -29,18 +29,18 @@ VTh3 = linspace(-10,10)*D2R; % VTh3 is array of Theta3 angles to iterate over
 %% Kinematics setup options -- Use only one of the three options
 
 %%% Kinematics using CalcLinkageRange
-[rVectors, thVectors] = CalcLinkageRange(linkage,VTh3);
-VTh1 = thVectors(1,:);
-VTh2 = thVectors(2,:);
-% VTh3 = thVectors(3,:);    % Th3 is already set so no need to re-set it, but it remains the same so it doesn't matter either way
-VTh4 = thVectors(4,:);
+% [rVectors, thVectors] = CalcLinkageRange(linkage,VTh3,fullSoltn=1);
+% VTh1 = thVectors(1,:);
+% VTh2 = thVectors(2,:);
+% % VTh3 = thVectors(3,:);    % Th3 is already set so no need to re-set it, but it remains the same so it doesn't matter either way
+% VTh4 = thVectors(4,:);
 
 
-%%% Kinematics using CalcSoltnRange
-% solVectors = CalcSoltnRange(linkage,VTh3);
-% VTh1 = ones(1,length(VTh3))*Th1;
-% VTh2 = solVectors(1,:);
-% VTh4 = solVectors(2,:);
+%%% Kinematics using CalcLinkage only returning the two unknowns
+[VTh2,VTh4] = CalcLinkageRange(linkage,VTh3); % optional argument: fullSoltn=0
+VTh1 = ones(1,length(VTh3))*Th1;
+%  = solVectors(1,:);
+%  = solVectors(2,:);
 
 %%% Kinematics using CalcLinkage
 % VTh1 = ones(1,length(VTh3))*Th1;

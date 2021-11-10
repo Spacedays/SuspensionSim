@@ -82,71 +82,65 @@ classdef NBarLinkage
             unknown2 = Xtemp(2);
         end
         
-        function solVectors = CalcSoltnRange(obj,drivingVarVector,drivingVar)
-            % Returns a 2xlen(drivingVarVector) vector for the two solution vars
+        function [solV1, solV2] = CalcLinkageRange(obj,drivingVarVector,options)
+            % Returns an mxn vector of the entire linkage for the analysis range
+            arguments
+                obj
+                drivingVarVector (1,:) {mustBeNumeric}
+                options.drivingVar (1,2) {mustBeNumeric}
+                options.FullSoltn (1,1) {mustBeNumeric} = 0
+            end
             
             if (nargin < 2)
                 disp("ERROR: Not Enough Argiments")
                 return
-            elseif (nargin > 2)
-                obj.drivingVar = drivingVar;
+            elseif (nargin > 2 && ~isempty(options.drivingVar))
+                obj.drivingVar = options.drivingVar;
             end
             
-%             Setup initial vectors
+            
+            
             solVectors = ones(2,length(drivingVarVector));
-            for k=1:(length(drivingVarVector))
-                % Solving for Position
-            	drivingVarValue = drivingVarVector(k);
-            	[sol1,sol2] = CalcLinkage(obj,drivingVarValue);
-            	solVectors(1,k) = sol1;                  % Store solutions to vector
-            	solVectors(2,k) = sol2;
+                for k=1:(length(drivingVarVector))
+                    % Solving for Position
+                    drivingVarValue = drivingVarVector(k);
+                    [sol1,sol2] = CalcLinkage(obj,drivingVarValue);
+                    solVectors(1,k) = sol1;                  % Store solutions to vector
+                    solVectors(2,k) = sol2;
 
-            	obj.priorGuesses(1) = sol1;    % Use last solution for next guess
-            	obj.priorGuesses(2) = sol2;
+                    obj.priorGuesses(1) = sol1;    % Use last solution for next guess
+                    obj.priorGuesses(2) = sol2;
+                end
+                
+            if ~options.FullSoltn
+                solV1 = solVectors(1,:);
+                solV2 = solVectors(2,:);
+            else
+                % Setup initial vectors
+                rVectors = ones(length(obj.linkage), length(drivingVarVector));
+                thVectors = ones(length(obj.linkage), length(drivingVarVector));
+                for k=1:length(obj.linkage)
+                    rVectors(k,:) = rVectors(k) .* obj.linkage(1,k);
+                    thVectors(k,:) = thVectors(k) .* obj.linkage(2,k);
+                end
+                
+                %solVectors = CalcSoltnRange(obj,drivingVarVector);
+                % Put the solution vectors in the right place
+                switch obj.unknownPos1(1)
+                    case 1
+                        rVectors(obj.unknownPos1(2),:) = solVectors(1,:);
+                    case 2
+                        thVectors(obj.unknownPos1(2),:) = solVectors(1,:);
+                end
+                switch obj.unknownPos2(1)
+                    case 1
+                        rVectors(obj.unknownPos2(2),:) = solVectors(2,:);
+                    case 2
+                        thVectors(obj.unknownPos2(2),:) = solVectors(2,:);
+                end
+                solV1 = rVectors;
+                solV2 = thVectors;
             end
-        end
-        
-        function [rVectors, thVectors] = CalcLinkageRange(obj,drivingVarVector,drivingVar)
-            % Returns vectors for the entire linkage
-            
-            if (nargin < 2)
-                disp("ERROR: Not Enough Argiments")
-                return
-            elseif (nargin > 2)
-                obj.drivingVar = drivingVar;
-            end
-            
-            % Setup initial vectors
-            rVectors = ones(length(obj.linkage), length(drivingVarVector));
-            thVectors = ones(length(obj.linkage), length(drivingVarVector));
-            for k=1:length(obj.linkage)
-                rVectors(k,:) = rVectors(k) .* obj.linkage(1,k);
-                thVectors(k,:) = thVectors(k) .* obj.linkage(2,k);
-            end
-            
-%             switch obj.drivingVar(1)
-%                 case 1
-%                     rVectors(obj.drivingVar(1),:) = drivingVarVector;
-%                 case 2
-%                     thVectors(obj.drivingVar(1),:) = drivingVarVector;
-%             end
-            
-            solVectors = CalcSoltnRange(obj,drivingVarVector);
-            
-            % Set 
-            switch obj.unknownPos1(1)
-                case 1
-                    rVectors(obj.unknownPos1(2),:) = solVectors(1,:);
-                case 2
-                    thVectors(obj.unknownPos1(2),:) = solVectors(1,:);
-            end
-            switch obj.unknownPos2(1)
-                case 1
-                    rVectors(obj.unknownPos2(2),:) = solVectors(2,:);
-                case 2
-                    thVectors(obj.unknownPos2(2),:) = solVectors(2,:);
-            end
-            
             
             
         end
