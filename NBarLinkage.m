@@ -28,7 +28,7 @@ classdef NBarLinkage
             
                 % Setup options for fsolve
             Obj.Opt = optimset('Display','off'); % mod needed for non-square systems: ,'Algorithm', 'levenberg-marquardt'
-            
+            %'Display', 'final-detailed', 'TolFun',1e-12, 'MaxIter',10000, ... 'TolX', 1e-8, 'Display', 
             % Set obj.priorGuesses if provided
             if (nargin >= 3)
                Obj.PriorGuesses = InitGuesses;
@@ -199,9 +199,9 @@ classdef NBarLinkage
             % Returns an mxn vector of the entire linkage for the analysis range
             arguments
                 Obj
-                drivingLinkageVector (:,:) {mustBeNumeric}      % MxN vector of M links over range N, with two vectors of NaN
-                options.DrivingVar (1,2) {mustBeNumeric}        % Allows changing the driving variable on the object
-                options.FullSoltn (1,1) {mustBeNumeric} = 0
+                drivingLinkageVector  (2,:,:) {mustBeNumeric}	% MxN vector of M links over range N, with two vectors of NaN
+                options.DrivingVar    (1,2) {mustBeNumeric}     % Allows changing the driving variable on the object
+                options.FullSoltn     (1,1) {mustBeNumeric} = 0
             end
             
             if (nargin < 2)
@@ -212,6 +212,7 @@ classdef NBarLinkage
             end
             
             Obj.LinkageRange = drivingLinkageVector;
+%             Obj.LinkageRange(:,:,2) = drivingLinkageVector;
             
             drivingVarVector = Obj.LinkageRange(Obj.DrivingVar(1), Obj.DrivingVar(2), :);
                 for k=1:(length(drivingVarVector))
