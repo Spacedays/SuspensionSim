@@ -1,16 +1,16 @@
 classdef NBarLinkage
     properties
         Linkage    (2,:)        {mustBeReal} % First row is lengths, second row is angles [radians]; NaN for solution variables
-        DrivingVar (1,2) = [2,1]        % coordinate of driving variable
+        DrivingVar (1,2) = [2,1]    % coordinate of driving variable
         PosVectors(1,:) logical     % Vectors with a positive sign in the linkage eqn (( e.g. for r1*e^j*th1 + r2*e^j*th2 - r3*e^j*th3 = 0, it would be [1 1 0] ))
         NegVectors(1,:) logical     % Vectors w/ negative sign in linkage eqn ...^          (( for r1*e^j*th1 + r2*e^j*th2 - r3*e^j*th3 = 0, it would be [0 0 1] ))
-        UnknownPos1(1,2) = [2 2]        % Row, Col of unknown 1. First row is lengths, second is angles [rads]
+        UnknownPos1(1,2) = [2 2]    % Row, Col of unknown 1. First row is lengths, second is angles [rads]
         UnknownPos2(1,2) = [2 3]
-        LinkageRange  (2,:,:)               % used to store a range of linkage arrangements - row 1&2 are length& angle, columns are the variable numbers, 3 is the step index
+        LinkageRange  (2,:,:)       % used to store a range of linkage arrangements - row 1&2 are length& angle, columns are the variable numbers, 3 is the step index
         PriorGuesses = [0 0]    % Guess variables for fzero"
         Opt                     % Fzero Options
     end
-    % A four bar linkage will have two unknowns, one driving the other.
+    % A four bar linkage will have two unknowns, with a third driving input.
     
     methods
         function Obj = NBarLinkage(Linkage,DrivingVar,InitGuesses,PosVectors,NegVectors)   % Constructor
@@ -48,9 +48,16 @@ classdef NBarLinkage
                 Obj.UnknownPos2 = [2, find(unknowns(2,:))];     %angle
             end
             
-            if (exist('PosVectors','var') && exist('NegVectors','var'))
-                Obj.PosVectors = PosVectors;
-                Obj.NegVectors = NegVectors;
+            if (xor(exist('PosVectors','var'), exist('NegVectors','var')) )
+                if (exist('PosVectors','var'))
+                    Obj.PosVectors = PosVectors;
+                    Obj.NegVectors = ~Obj.PosVectors;
+                elseif (exist('NegVectors','var'))
+                    Obj.NegVectors = NegVectors;
+                    Obj.PosVectors = ~Obj.NegVectors;
+                end
+                
+                
             else
                 if (max(size(Obj.Linkage)) == 4)
                     Obj.PosVectors = logical([1 1 0 0]);
@@ -142,10 +149,10 @@ classdef NBarLinkage
                     % Solving for Position
                     DrivingVarValue = drivingVarVector(k);
                     [sol1,sol2] = CalcLinkage(Obj,DrivingVarValue);
-                    solVectors(1,k) = sol1;                  % Store solutions to vector
+                    solVectors(1,k) = sol1;                 % Store solutions to vector
                     solVectors(2,k) = sol2;
 
-                    Obj.PriorGuesses(1) = sol1;    % Use last solution for next guess
+                    Obj.PriorGuesses(1) = sol1;             % Use previous solution for next guess
                     Obj.PriorGuesses(2) = sol2;
                 end
                 
@@ -153,7 +160,7 @@ classdef NBarLinkage
                 solV1 = solVectors(1,:);
                 solV2 = solVectors(2,:);
             else
-                % Setup initial vectors
+                % Setup constant vectors
                 rVectors = ones(length(Obj.Linkage), length(drivingVarVector));
                 thVectors = ones(length(Obj.Linkage), length(drivingVarVector));
                 for k=1:length(Obj.Linkage)
@@ -161,7 +168,6 @@ classdef NBarLinkage
                     thVectors(k,:) = thVectors(k) .* Obj.Linkage(2,k);
                 end
                 
-                %solVectors = CalcSoltnRange(obj,DrivingVarVector);
                 % Put the solution vectors in the right place
                 switch Obj.UnknownPos1(1)
                     case 1
@@ -204,43 +210,19 @@ classdef NBarLinkage
                 for k=1:(length(drivingVarVector))
                     % Solving for Position
                     [sol1,sol2] = CalcLinkage(Obj,drivingVarVector(k));
-                    Obj.LinkageRange(Obj.UnknownPos1(1),Obj.UnknownPos1(2),k) = sol1;                  % Store solutions to vector
-                    Obj.LinkageRange(Obj.UnknownPos2(1),Obj.UnknownPos2(2),k) = sol2;   % solVectors(2,k) = sol2;
+                    Obj.LinkageRange(Obj.UnknownPos1(1),Obj.UnknownPos1(2),k) = sol1;	% Store solutions to vector
+                    Obj.LinkageRange(Obj.UnknownPos2(1),Obj.UnknownPos2(2),k) = sol2;
 
-                    Obj.PriorGuesses(1) = sol1;    % Use last solution for next guess
+                    Obj.PriorGuesses(1) = sol1;                                         % Use last solution for next guess
                     Obj.PriorGuesses(2) = sol2;
                 end
                 
-            if ~options.FullSoltn           %!!!
+            if ~options.FullSoltn
                 solV1 = Obj.LinkageRange(Obj.UnknownPos1(1),Obj.UnknownPos1(2),:);
                 solV2 = Obj.LinkageRange(Obj.UnknownPos2(1),Obj.UnknownPos2(2),:);
             else
                 solV1 = Obj.LinkageRange(1,:,:);
                 solV2 = Obj.LinkageRange(2,:,:);
-%                 % Setup initial vectors
-%                 rVectors = ones(length(Obj.Linkage), length(drivingLinkageVector));
-%                 thVectors = ones(length(Obj.Linkage), length(drivingLinkageVector));
-%                 for k=1:length(Obj.Linkage)
-%                     rVectors(k,:) = rVectors(k) .* Obj.Linkage(1,k);
-%                     thVectors(k,:) = thVectors(k) .* Obj.Linkage(2,k);
-%                 end
-%                 
-%                 %solVectors = CalcSoltnRange(obj,DrivingVarVector);
-%                 % Put the solution vectors in the right place
-%                 switch Obj.UnknownPos1(1)
-%                     case 1
-%                         rVectors(Obj.UnknownPos1(2),:) = solVectors(1,:);
-%                     case 2
-%                         thVectors(Obj.UnknownPos1(2),:) = solVectors(1,:);
-%                 end
-%                 switch Obj.UnknownPos2(1)
-%                     case 1
-%                         rVectors(Obj.UnknownPos2(2),:) = solVectors(2,:);
-%                     case 2
-%                         thVectors(Obj.UnknownPos2(2),:) = solVectors(2,:);
-%                 end
-%                 solV1 = rVectors;
-%                 solV2 = thVectors;
             end
             
             disp("Done")
