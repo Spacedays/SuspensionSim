@@ -1,5 +1,5 @@
 
-clc;clear;close all
+clc;clear;%close all
 %% Roll Center Calculations
 % TBD
 
@@ -20,7 +20,7 @@ r3 = 15*25.4;%381;
 r4 = 7.5*25.4;%190.5;
 
 initGuesses = [10*D2R,90*D2R]; %Theta 2 and Theta 4 initial guesses
-suspensionLinkage = NBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], initGuesses);
+SL = NBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], initGuesses);
 
 VTh3 = linspace(-10,10)*D2R; % VTh3 is array of Theta3 angles to iterate over
 
@@ -29,7 +29,7 @@ VTh3 = linspace(-10,10)*D2R; % VTh3 is array of Theta3 angles to iterate over
 %% Kinematics setup options -- Use only one of the three options
 
 %%% Kinematics using CalcLinkageRange
-[~, thVectors] = CalcLinkageRange(suspensionLinkage,VTh3,fullSoltn=1);    % rVectors not used here
+[~, thVectors] = CalcLinkageRange(SL,VTh3,fullSoltn=1);    % rVectors not used here
 VTh1 = thVectors(1,:);
 VTh2 = thVectors(2,:);
 % VTh3 = thVectors(3,:);    % Th3 is already set so no need to re-set it, but it remains the same so it doesn't matter either way
@@ -114,7 +114,7 @@ ymin = ymin-Space;
 ymax = ymax+Space;
 
 % Mechanism Animation
-figure(2)%'WindowState','maximized') % Large Figure
+figure(2) %2)%'WindowState','maximized') % Large Figure
 grid on
 for t=1:length(VTh3)
     bar1x=[Ox(t) Bx(t)]; % Coordinates Link 1

@@ -2,6 +2,8 @@ classdef NBarLinkage
     properties
         Linkage    (2,:)        {mustBeReal} % First row is lengths, second row is angles [radians]; NaN for solution variables
         DrivingVar (1,2) = [2,1]        % coordinate of driving variable
+        PosVectors(1,:) logical     % Vectors with a positive sign in the linkage eqn (( e.g. for r1*e^j*th1 + r2*e^j*th2 - r3*e^j*th3 = 0, it would be [1 1 0] ))
+        NegVectors(1,:) logical     % Vectors w/ negative sign in linkage eqn ...^          (( for r1*e^j*th1 + r2*e^j*th2 - r3*e^j*th3 = 0, it would be [0 0 1] ))
         UnknownPos1(1,2) = [2 2]        % Row, Col of unknown 1. First row is lengths, second is angles [rads]
         UnknownPos2(1,2) = [2 3]
         LinkageRange  (2,:,:)               % used to store a range of linkage arrangements - row 1&2 are length& angle, columns are the variable numbers, 3 is the step index
@@ -11,16 +13,16 @@ classdef NBarLinkage
     % A four bar linkage will have two unknowns, one driving the other.
     
     methods
-        function Obj = NBarLinkage(Linkage,DrivingVar,InitGuesses)   % Constructor
+        % LEFT OFF AT POSVECTORS & NEGVECTORS BEING SIZE 2x0!!!
+        function Obj = NBarLinkage(Linkage,DrivingVar,InitGuesses,PosVectors,NegVectors)   % Constructor
             % The unknows are defined by NaN values
             % Example fxn call: linkage = NBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], [10*D2R, 90*D2R]);
                 % Here, Th3 is the driving variable with Th2 and Th4 as the solution variables
-            
             % Setup options for fsolve
-            Obj.Opt = optimset('Display','off');
+            Obj.Opt = optimset('Display','off','Algorithm', 'levenberg-marquardt');
             
             % Set obj.priorGuesses if provided
-            if (nargin == 3)
+            if (nargin >= 3)
                Obj.PriorGuesses = InitGuesses;
             end
             
@@ -46,6 +48,21 @@ classdef NBarLinkage
                 Obj.UnknownPos1 = [1, find(unknowns(1,:))];     %length
                 Obj.UnknownPos2 = [2, find(unknowns(2,:))];     %angle
             end
+            
+            if (exist('PosVectors','var') && exist('NegVectors','var'))
+                Obj.PosVectors = PosVectors;
+                Obj.NegVectors = NegVectors;
+            else
+                if (max(size(Obj.Linkage)) == 4)
+                    Obj.PosVectors = logical([1 1 0 0]);
+                elseif (max(size(Obj.Linkage)) == 3)
+                    Obj.PosVectors = logical([1 1 0]);
+                else
+                    disp(max(size(Obj.Linkage)))
+                end
+                Obj.NegVectors = ~Obj.PosVectors;
+            end
+            
         end
         
         function out = LinkageEqn(Obj, X)      % Function defined using geometry values from the ojb's linkage array
@@ -67,6 +84,18 @@ classdef NBarLinkage
             out = [real(eqn); imag(eqn)];
         end
         
+        function out = LinkageEqn2(Obj, X)      % Function defined using geometry values from the obj's linkage array
+            % This 
+            
+            % Updates the unknowns' position to the previous guess
+            Obj.Linkage(Obj.UnknownPos1(1),Obj.UnknownPos1(2)) = X(1);%obj.priorGuesses(1);
+            Obj.Linkage(Obj.UnknownPos2(1),Obj.UnknownPos2(2)) = X(2);%obj.priorGuesses(2);
+            
+            eqn = Obj.Linkage(1,Obj.PosVectors).*exp(1i.*Obj.Linkage(2,Obj.PosVectors)) - Obj.Linkage(1,Obj.NegVectors).*exp(1i.*Obj.Linkage(2,Obj.NegVectors));
+            
+            out = [real(eqn); imag(eqn)];
+        end
+        
         function out = LinkageBCEqn(Obj, X)      % Fxn using Obj.linkage and a boundary condition eqn
             out = linkageEqn(Obj,X);
             
@@ -75,6 +104,7 @@ classdef NBarLinkage
         function MakeLinkageBCEqn()
         
         end
+        
         function [unknown1, unknown2] = CalcLinkage(Obj,drivingVarValue,DrivingVar) % Use this function to calculate a linkage position
             if (nargin < 2)
                 disp("ERROR: Not Enough Argiments")
@@ -84,9 +114,10 @@ classdef NBarLinkage
             end
             Obj.Linkage(Obj.DrivingVar(1),Obj.DrivingVar(2)) = drivingVarValue;     % Change driving Var Value as requested
             
-%             fxn = ;
-%             a = @(X) LinkageEqn(obj,X);
-            Xtemp = fsolve(@(X) LinkageEqn(Obj,X), Obj.PriorGuesses, Obj.Opt);
+%           fxn = ;
+%           a = @(X) LinkageEqn(obj,X);
+%             Xtemp = fsolve(@(X) LinkageEqn(Obj,X), Obj.PriorGuesses, Obj.Opt);
+            Xtemp = fsolve(@(X) LinkageEqn2(Obj,X), Obj.PriorGuesses, Obj.Opt);
             unknown1 = Xtemp(1);
             unknown2 = Xtemp(2);
         end
