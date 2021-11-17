@@ -13,12 +13,21 @@ classdef NBarLinkage
     % A four bar linkage will have two unknowns, with a third driving input.
     
     methods
-        function Obj = NBarLinkage(Linkage,DrivingVar,InitGuesses,PosVectors,NegVectors)   % Constructor
+        function Obj = NBarLinkage(Linkage,DrivingVar,InitGuesses,options)   % Constructor
             % The unknows are defined by NaN values
             % Example fxn call: linkage = NBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], [10*D2R, 90*D2R]);
                 % Here, Th3 is the driving variable with Th2 and Th4 as the solution variables
-            % Setup options for fsolve
-            Obj.Opt = optimset('Display','off'); % Needed for non-square systems: ,'Algorithm', 'levenberg-marquardt'
+            
+            arguments
+                Linkage (2,:)       {mustBeReal}
+                DrivingVar  (1,2)   
+                InitGuesses (1,2)   {mustBeReal}
+                options.PosVectors (1,:) logical
+                options.NegVectors (1,:) logical
+            end
+            
+                % Setup options for fsolve
+            Obj.Opt = optimset('Display','off'); % mod needed for non-square systems: ,'Algorithm', 'levenberg-marquardt'
             
             % Set obj.priorGuesses if provided
             if (nargin >= 3)
@@ -39,7 +48,7 @@ classdef NBarLinkage
                 unknownIndexes = find(unknowns(2,:));
                 Obj.UnknownPos1 = [2, unknownIndexes(1)];
                 Obj.UnknownPos2 = [2, unknownIndexes(2)];
-            elseif (isEmpty(find(unknowns(2,:))))   % ==> Both unknowns are lengths
+            elseif (isempty(find(unknowns(2,:),1)))   % ==> Both unknowns are lengths
                 unknownIndexes = find(unknowns(2,:));
                 Obj.UnknownPos1 = [1, unknownIndexes(1)];
                 Obj.UnknownPos2 = [1, unknownIndexes(2)];
@@ -48,16 +57,14 @@ classdef NBarLinkage
                 Obj.UnknownPos2 = [2, find(unknowns(2,:))];     %angle
             end
             
-            if (xor(exist('PosVectors','var'), exist('NegVectors','var')) )
-                if (exist('PosVectors','var'))
-                    Obj.PosVectors = PosVectors;
+            if xor(isfield(options,'PosVectors'), isfield(options,'NegVectors'))
+                if (isfield(options,'PosVectors'))
+                    Obj.PosVectors = options.PosVectors;
                     Obj.NegVectors = ~Obj.PosVectors;
-                elseif (exist('NegVectors','var'))
-                    Obj.NegVectors = NegVectors;
+                elseif (isfield(options,'NegVectors')) %~isempty(options.NegVectors))
+                    Obj.NegVectors = options.NegVectors;
                     Obj.PosVectors = ~Obj.NegVectors;
                 end
-                
-                
             else
                 if (max(size(Obj.Linkage)) == 4)
                     Obj.PosVectors = logical([1 1 0 0]);
