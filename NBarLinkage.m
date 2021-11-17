@@ -7,19 +7,18 @@ classdef NBarLinkage
         UnknownPos1(1,2) = [2 2]        % Row, Col of unknown 1. First row is lengths, second is angles [rads]
         UnknownPos2(1,2) = [2 3]
         LinkageRange  (2,:,:)               % used to store a range of linkage arrangements - row 1&2 are length& angle, columns are the variable numbers, 3 is the step index
-        PriorGuesses = [0 0]    % Guess variables for fzero
+        PriorGuesses = [0 0]    % Guess variables for fzero"
         Opt                     % Fzero Options
     end
     % A four bar linkage will have two unknowns, one driving the other.
     
     methods
-        % LEFT OFF AT POSVECTORS & NEGVECTORS BEING SIZE 2x0!!!
         function Obj = NBarLinkage(Linkage,DrivingVar,InitGuesses,PosVectors,NegVectors)   % Constructor
             % The unknows are defined by NaN values
             % Example fxn call: linkage = NBarLinkage([r1 r2 r3 r4; Th1 NaN Th3 NaN], [2,3], [10*D2R, 90*D2R]);
                 % Here, Th3 is the driving variable with Th2 and Th4 as the solution variables
             % Setup options for fsolve
-            Obj.Opt = optimset('Display','off','Algorithm', 'levenberg-marquardt');
+            Obj.Opt = optimset('Display','off'); % Needed for non-square systems: ,'Algorithm', 'levenberg-marquardt'
             
             % Set obj.priorGuesses if provided
             if (nargin >= 3)
@@ -65,7 +64,7 @@ classdef NBarLinkage
             
         end
         
-        function out = LinkageEqn(Obj, X)      % Function defined using geometry values from the ojb's linkage array
+        function out = LinkageEqn(Obj, X)      % Function defined using geometry values from the obj's linkage array
             % Updates the unknowns' position to the previous guess
             Obj.Linkage(Obj.UnknownPos1(1),Obj.UnknownPos1(2)) = X(1);%obj.priorGuesses(1);
             Obj.Linkage(Obj.UnknownPos2(1),Obj.UnknownPos2(2)) = X(2);%obj.priorGuesses(2);
@@ -85,13 +84,13 @@ classdef NBarLinkage
         end
         
         function out = LinkageEqn2(Obj, X)      % Function defined using geometry values from the obj's linkage array
-            % This 
+            % Vectorized LinkageEqn
             
             % Updates the unknowns' position to the previous guess
             Obj.Linkage(Obj.UnknownPos1(1),Obj.UnknownPos1(2)) = X(1);%obj.priorGuesses(1);
             Obj.Linkage(Obj.UnknownPos2(1),Obj.UnknownPos2(2)) = X(2);%obj.priorGuesses(2);
             
-            eqn = Obj.Linkage(1,Obj.PosVectors).*exp(1i.*Obj.Linkage(2,Obj.PosVectors)) - Obj.Linkage(1,Obj.NegVectors).*exp(1i.*Obj.Linkage(2,Obj.NegVectors));
+            eqn = sum(Obj.Linkage(1,Obj.PosVectors).*exp(1i.*Obj.Linkage(2,Obj.PosVectors)) ) - sum(Obj.Linkage(1,Obj.NegVectors).*exp(1i.*Obj.Linkage(2,Obj.NegVectors)) );
             
             out = [real(eqn); imag(eqn)];
         end
@@ -114,8 +113,6 @@ classdef NBarLinkage
             end
             Obj.Linkage(Obj.DrivingVar(1),Obj.DrivingVar(2)) = drivingVarValue;     % Change driving Var Value as requested
             
-%           fxn = ;
-%           a = @(X) LinkageEqn(obj,X);
 %             Xtemp = fsolve(@(X) LinkageEqn(Obj,X), Obj.PriorGuesses, Obj.Opt);
             Xtemp = fsolve(@(X) LinkageEqn2(Obj,X), Obj.PriorGuesses, Obj.Opt);
             unknown1 = Xtemp(1);
