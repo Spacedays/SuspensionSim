@@ -113,7 +113,7 @@ F2 = Orx + 1i*Ory + real(R7) + imag(R7)*1i;
 %% Plotting and Pull Rod Calculations -- Pull Rod calcs TBD
 motion_ratio = 1.0;
 
-trigcalcs = true;
+trigcalcs = false;
 kincalcs = true;
 if (trigcalcs)
     % Calculate angle of rocker arm using lengths from O2-E, D-E, O2-D
@@ -175,7 +175,7 @@ grid on
 
 %% Motion Ratio Calcs
 
-
+plot_pullrod_length = false;
 % figure(3)
 subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
 VL_pullrod = ((abs(Fx - Ex)).^2 + (abs(Fy - Ey)).^2).^0.5;    % Length of pullrod
@@ -185,9 +185,14 @@ if (trigcalcs && kincalcs)
     legend('kinematics','trig')
     title("Trig vs Kinematics pullrod length")
     grid on
-else 
+elseif plot_pullrod_length
     plot(1:length(VL_pullrod), VL_pullrod)
     title("Pullrod Length vs Index")
+    grid on
+else
+    plot(1:length(VL_pullrod),VTh7*R2D)
+    title("Rocker Angle vs Index")
+    xticks(0:10:100), yticks( round(min(VTh7*R2D)):5:max(VTh7*R2D)  )
     grid on
 end
 
