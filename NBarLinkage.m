@@ -214,16 +214,22 @@ classdef NBarLinkage
             Obj.LinkageRange = drivingLinkageVector;
 %             Obj.LinkageRange(:,:,2) = drivingLinkageVector;
             
-            drivingVarVector = Obj.LinkageRange(Obj.DrivingVar(1), Obj.DrivingVar(2), :);
-                for k=1:(length(drivingVarVector))
-                    % Solving for Position
-                    [sol1,sol2] = CalcLinkage(Obj,drivingVarVector(k));
-                    Obj.LinkageRange(Obj.UnknownPos1(1),Obj.UnknownPos1(2),k) = sol1;	% Store solutions to vector
-                    Obj.LinkageRange(Obj.UnknownPos2(1),Obj.UnknownPos2(2),k) = sol2;
-
-                    Obj.PriorGuesses(1) = sol1;                                         % Use last solution for next guess
-                    Obj.PriorGuesses(2) = sol2;
+            drivingVarVector = Obj.LinkageRange(Obj.DrivingVar(1), Obj.DrivingVar(2), :);   % Update driving var
+            
+            for k=1:(length(drivingVarVector))
+                for i=1:length(Obj.Linkage)
+                    Obj.Linkage(1,i) = Obj.LinkageRange(1,i,k);
+                    Obj.Linkage(2,i) = Obj.LinkageRange(2,i,k);
                 end
+                
+                % Solving for Position
+                [sol1,sol2] = CalcLinkage(Obj,drivingVarVector(k));
+                Obj.LinkageRange(Obj.UnknownPos1(1),Obj.UnknownPos1(2),k) = sol1;	% Store solutions to vector
+                Obj.LinkageRange(Obj.UnknownPos2(1),Obj.UnknownPos2(2),k) = sol2;
+
+                Obj.PriorGuesses(1) = sol1;                                         % Use last solution for next guess
+                Obj.PriorGuesses(2) = sol2;
+            end
                 
             if ~options.FullSoltn
                 solV1 = Obj.LinkageRange(Obj.UnknownPos1(1),Obj.UnknownPos1(2),:);
