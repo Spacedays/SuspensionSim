@@ -1,7 +1,7 @@
 
 clc;clear;%close all
 %% Plot setup
-NSubplots = 3;  % 1-Camber, 2-Scrub, 3-Pullrod Motion Ratio, 4-Pullrod length
+% 1-Camber, 2-Scrub, 3-Pullrod Motion Ratio, 4-Pullrod length
 SPRows = 2; SPCols = 2;
 sub_idx = 1;
 figure(1); 
@@ -35,51 +35,28 @@ VTh2 = thVectors(2,:);
 % VTh3 = thVectors(3,:);    % Th3 is already set so no need to re-set it, but it remains the same so it doesn't matter either way
 VTh4 = thVectors(4,:);
 
-%% Making some vectors
+%% Linkage Vectors
 A = (216.23 + 1i*5*25.4)*ones(1,length(VTh3));
 R1 = r1.*exp(1i.*VTh1.*ones(1,length(VTh3)) );  B = A+R1;
 R2 = r2*ones(1,length(VTh3)).*exp(1i.*VTh2);    D = B+R2;
 R3 = r3*ones(1,length(VTh3)).*exp(1i.*VTh3);    C = A+R3;
 R4 = r4*ones(1,length(VTh3)).*exp(1i.*VTh4);    
 
-%% Four Bar Linkage Coordinates
-
-% These vars are also used for animation
-% Ax = 2.5*25.4*ones(1,length(VTh3));     % x Position of the origin
-% Ay = 5*25.4*ones(1,length(VTh3));       % y position of the origin
-% Bx = Ax + real(r1*exp(1i*Th1*ones(length(VTh3)) ));% x coordinate for point B
-% By = Ay + imag(r1*exp(1i*Th1*ones(length(VTh3)) ));% y coordinate for point B
-% Cx = Ax + real(r3*exp(1i*VTh3));    % x coordinate for point C
-% Cy = Ay + imag(r3*exp(1i*VTh3));    % y coordinate for point C
-% Dx = Cx + real(r4*exp(1i*VTh4));    % x coordinate for for point D
-% Dy = Cy + imag(r4*exp(1i*VTh4));    % y coordinate for for point D
-
-Ax = real(A); Ay = imag(A);
-% Bx = real(A+R1); By = imag(A+R1);
-Bx = real(B); By = imag(B);  
-% Cx = real(A+R3); Cy = imag(A+R3);
-Cx = real(C); Cy = imag(C);
-% Dx = A + real(R2); Dy = imag(Bx+R2);
-Dx = real(D); Dy = imag(D);
-
-
 
 
 %% Pull Rod Calculations
-rocker_offset = [-25.4,3*25.4]; %[-15.4,40.8];   % x,y wrt lower right A-arm mount [mm] 
-rocker_pull_radius = 1.5*25.4; %1.5*25.4;   	% [mm]
+rocker_axis_pos = [-50,75]; %[-15.4,40.8];   % x,y wrt lower right A-arm mount [mm] 
+rocker_pull_radius = 37.5; %1.5*25.4;   	% [mm]
 l_pullrod = 405;% 16.5*25.4;  
 pullrod_upright_off = [0 0]; % x,y offset from upper upright suspension link (point D)
 
-Orx = Ax + ones(1,length(VTh3))*rocker_offset(1);   % Rocker Origin x
-Ory = Ay + ones(1,length(VTh3))*rocker_offset(2);   % Rocker Origin x
+O_R = A + ones(1,length(VTh3))*(rocker_axis_pos(1) + 1i*rocker_axis_pos(2));    % Rocker axis of rotation
+
 E = D;      % UPRIGHT Pull Rod Attachment Point (point E)
-Ex = real(E);
-Ey = imag(E);
 
 % Setup drivingLinkageVector
 
-Vr8 = ((Dx-Orx).^2+(Dy-Ory).^2).^0.5;   r8 = Vr8(1);  % Distance from rocker axis to upper upright susp. link
+Vr8 = ((real(D)-real(O_R)).^2+(imag(D)-imag(O_R)).^2).^0.5;   r8 = Vr8(1);  % Distance from rocker axis to upper upright susp. link
 r5 = sum(pullrod_upright_off.^2).^0.5;  Vr5 = r5*ones(size(Vr8));   % Distance from upper upright suspension link to pullrod mount
 r6 = l_pullrod; Vr6 = r6*ones(size(Vr8));
 r7 = rocker_pull_radius;    Vr7 = r7*ones(size(Vr8));
@@ -88,7 +65,7 @@ if (isnan(Th5)), Th5 = 0; end
 VTh5 = Th5*ones(size(Vr8));
 VTh6 = NaN*ones(size(Vr8));
 VTh7 = VTh6;
-VTh8 = atan((Dy-Ory)./(Dx-Orx))+pi; Th8 = VTh8(1);
+VTh8 = atan((imag(D)-imag(O_R))./(real(D)-real(O_R)))+pi; Th8 = VTh8(1);
 initGuesses = [90*D2R, 120*D2R];  % Th6 Th7
 
 % Linkage Loop Eqn starting from point D
@@ -107,44 +84,14 @@ R6 = r6.*exp(1i.*VTh6);
 R7 = r7*exp(1i*VTh7);
 
 F = E - R6;
-F2 = Orx + 1i*Ory + real(R7) + imag(R7)*1i;
+F2 = O_R + R7;
 % F2 = 
-
-%% Plotting and Pull Rod Calculations -- Pull Rod calcs TBD
-motion_ratio = 1.0;
-
-trigcalcs = false;
-kincalcs = true;
-if (trigcalcs)
-    % Calculate angle of rocker arm using lengths from O2-E, D-E, O2-D
-    l_OrE = sqrt((Ex-Orx).^2 - (Ey-Ory).^2);    % distance from rocker origin to UPRIGHT pull rod attachment point
-    %th_IF = acos((rocker_pull_radius.^2 - l_pullrod.^2 - l_OrF.^2)./(-2 .* l_pullrod .* l_OrF));   % angle EFO2
-    th_E = atan((Ey-Ory)./(Ex-Orx));
-    th_O = real(acos((l_pullrod.^2 - l_OrE.^2 - rocker_pull_radius.^2)./(-2*l_OrE*rocker_pull_radius)));
-    th_E2 = pi/2 - (th_O + th_E);
-    %th_HF = th_IF + th_F;
-
-    %Ex = Fx - l_pullrod*cos(th_HF);
-    %Ey = Fy - l_pullrod*sin(th_HF);
-    Fx_trig = Orx - rocker_pull_radius*cos(th_E2);
-    Fy_trig = Ory + rocker_pull_radius*sin(th_E2);
-end
-if kincalcs
-    % Orx, Ory for rocker rotation axis
-%     Fx = Orx - real(Vr7.*exp(1i.*VTh7));
-%     Fy = Ory - imag(Vr7.*exp(1i.*VTh7));
-    Fx = real(F);
-    Fy = imag(F);
-end
-
-% Ex = Orx ;         % x coordinate for point E
-% Ey = Oy + rocker_origin(2);         % y coordinate for point E
 
 
 %% Camber Calcs
 % figure(1)
 subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
-camber = atand((Dx-Cx)./(Dy-Cy));
+camber = atand((real(D)-real(C))./(imag(D)-imag(C)));
 bump = r3*sin(VTh3);
 plot(bump,camber)
 grid on
@@ -173,28 +120,69 @@ xlabel("Bump [mm]"), ylabel("Wheel Scrub [mm]")
 xticks(-60:10:60), yticks(-15:2.5:5)
 grid on
 
-%% Motion Ratio Calcs
-
+%% Sanity check to ensure mechanism isn't stretching - If it is correct, the pullrod length should be constant
+trigcalcs = false;
 plot_pullrod_length = false;
+if (trigcalcs)
+    % Calculate angle of rocker arm using lengths from O2-E, D-E, O2-D
+    l_OrE = sqrt((real(E)-real(O_R)).^2 - (imag(E)-imag(O_R)).^2);    % distance from rocker origin to UPRIGHT pull rod attachment point
+    %th_IF = acos((rocker_pull_radius.^2 - l_pullrod.^2 - l_OrF.^2)./(-2 .* l_pullrod .* l_OrF));   % angle EFO2
+    th_E = atan((imag(E)-imag(O_R))./(real(E)-real(O_R)));
+    th_O = real(acos((l_pullrod.^2 - l_OrE.^2 - rocker_pull_radius.^2)./(-2*l_OrE*rocker_pull_radius)));
+    th_E2 = pi/2 - (th_O + th_E);
+    %th_HF = th_IF + th_F;
+
+    %Ex = Fx - l_pullrod*cos(th_HF);
+    %Ey = Fy - l_pullrod*sin(th_HF);
+    Fx_trig = real(O_R) - rocker_pull_radius*cos(th_E2);
+    Fy_trig = imag(O_R) + rocker_pull_radius*sin(th_E2);
+end
+
 % figure(3)
-subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
-VL_pullrod = ((abs(Fx - Ex)).^2 + (abs(Fy - Ey)).^2).^0.5;    % Length of pullrod
-if (trigcalcs && kincalcs)
-    VL_pullrod_trig = ((abs(Fx_trig - Ex)).^2 + (abs(Fy_trig - Ey)).^2).^0.5;
+VL_pullrod = ((abs(real(F) - real(E))).^2 + (abs(imag(F) - imag(E))).^2).^0.5;    % Length of pullrod
+if max(VL_pullrod) - min(VL_pullrod) > 1    % if the pullrod stretches by more than 1mm, plot length vs index
+    plot_pullrod_length = true;
+else
+    plot_pullrod_length = false;
+end
+
+if (trigcalcs)
+    subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+    VL_pullrod_trig = ((abs(Fx_trig - real(E))).^2 + (abs(Fy_trig - imag(E))).^2).^0.5;
     plot(1:length(VL_pullrod), VL_pullrod, 1:length(VL_pullrod_trig), VL_pullrod_trig)
     legend('kinematics','trig')
     title("Trig vs Kinematics pullrod length")
     grid on
-elseif plot_pullrod_length
+elseif plot_pullrod_length == true
+    subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
     plot(1:length(VL_pullrod), VL_pullrod)
     title("Pullrod Length vs Index")
     grid on
-else
-    plot(1:length(VL_pullrod),VTh7*R2D)
-    title("Rocker Angle vs Index")
-    xticks(0:10:100), yticks( round(min(VTh7*R2D)):5:max(VTh7*R2D)  )
-    grid on
 end
+
+%% Motion Ratio Calculations
+r_rocker_shockside = 100;
+shock_mount_pos = O_R -.75*r_rocker_shockside + 1i*150;   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
+R9 = exp(1i*(VTh7 - D2R*90)) * r_rocker_shockside;  % Rocker Shock-Side link
+G = O_R + R9;
+
+subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+plot(1:length(VL_pullrod),VTh7*R2D)
+title("Rocker Angle vs Index")
+xticks(0:10:100), yticks( (round(min(VTh7*R2D),2,'significant')-5):5:max(VTh7*R2D)+5  )
+grid on
+
+% Motion Ratio
+shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
+spring_velocity = diff(shock_length);
+% spring_velocity(end+1) = spring_velocity(end);
+
+subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+plot(bump(2:end),spring_velocity)
+title("Motion Ratio vs Bump")
+xticks(0-60:10:60), yticks(linspace( (round(min(spring_velocity),2,'significant')), max(spring_velocity) ,10 ) )
+grid on
+
 
 %% Animation
 % Determine the positions of the four 
@@ -202,13 +190,16 @@ end
 plotlinkage = true;
 
 if plotlinkage
+    links = cat(3,[A;B],[B;D],[A;C],[C;D],[D;E],[E;F],[F;O_R],[WM;WC],[WC;WCP],[G;O_R],[G;shock_mount_pos]);
+    links = permute(links,[1 3 2]);     % Rearrange links to result in array: 2 x NumBars x NumIndexes
+                                        % row 1 is the starting point, row 2 is end
     
     % Find Plot Limits
-    xmin = min([min(Ax) min(Bx) min(Cx) min(Dx) min(Ex) min(Ex) min(Orx) min(min(Fx)) min(WMx) min(WCx) min(WCPx)]);
-    xmax = max([max(Ax) max(Bx) max(Cx) max(Dx) max(Ex) max(Ex) max(Orx) max(max(Fx)) max(WMx) max(WCx) max(WCPx)]);
-    ymin = min([min(Ay) min(By) min(Cy) min(Dy) min(Ey) min(Ey) min(Ory) min(min(Fy)) min(WMy) min(WCy) min(WCPy)]);
-    ymax = max([max(Ay) max(By) max(Cy) max(Dy) max(Ey) max(Ey) max(Ory) max(max(Fy)) max(WMy) max(WCy) max(WCPy)]);
-
+    xmin = min(real(links(:,:,:)), [], [1 2 3]);
+    xmax = max(real(links(:,:,:)), [], [1 2 3]);
+    ymin = min(imag(links(:,:,:)), [], [1 2 3]);
+    ymax = max(imag(links(:,:,:)), [], [1 2 3]);
+    
     % Calculate plot gap space
     Space=0.03*max([abs(xmin) abs(xmax) ...
                     abs(ymin) abs(ymax)]);
@@ -221,25 +212,8 @@ if plotlinkage
     % Mechanism Animation
     figure(2) %2)%'WindowState','maximized') % Large Figure
     grid on
-    for t=1:length(VTh3)
-        bar1x=real([A(t) B(t)]); % Coordinates Link 1
-        bar1y=imag([A(t) B(t)]);
-        bar2x=[Bx(t) Dx(t)]; % Coordinates Link 2
-        bar2y=[By(t) Dy(t)];
-        bar3x=[Ax(t) Cx(t)]; % Coordinates Link 3
-        bar3y=[Ay(t) Cy(t)];
-        bar4x=[Cx(t) Dx(t)]; % Coordinates Link 4
-        bar4y=[Cy(t) Dy(t)]; 
-        bar5x=[Dx(t) Ex(t)]; % Coordinates Link 5 - Upright Pullrod Offset
-        bar5y=[Dy(t) Ey(t)]; 
-        bar6x=[Ex(t) Fx(t)]; % Coordinates Link 6 - pull rod
-        bar6y=[Ey(t) Fy(t)]; 
-        bar7x=[Fx(t) Orx(t)]; % Coordinates Link 7 - rocker radius
-        bar7y=[Fy(t) Ory(t)];
-        wheelax_x = [WMx(t) WCx(t)];    wheelax_y = [WMy(t) WCy(t)];
-        wheelr_x = [WCx(t) WCPx(t)];   wheelr_y = [WCy(t) WCPy(t)];
-        plot(bar1x,bar1y,bar2x,bar2y,bar3x,bar3y,bar4x,bar4y,bar6x,bar6y,bar7x,bar7y,...
-            wheelax_x,wheelax_y, wheelr_x, wheelr_y,'LineWidth',2);   % ,bar5x,bar5y not plotted
+    for t=1:length(VTh3)        
+        plot(real(links(:,:,t)), imag(links(:,:,t)),'LineWidth',2);   % ,bar5x,bar5y not plotted
         axis equal   % Equal scale of x and y-axis 
         axis([xmin xmax ymin ymax]);
         M(t)=getframe; % For assembling movie frames
