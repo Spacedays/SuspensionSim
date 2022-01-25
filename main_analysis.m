@@ -119,7 +119,7 @@ R7 = r7*exp(1i*VTh7);
 F2 = E - R6;
 F = O_R + R7;
 
-if (real(F-F2).^2 + imag(F-F2).^2).^0.5 > 1  % If these deviate much, one is wrong
+if (length((real(F-F2).^2 + imag(F-F2).^2).^0.5 > 1) > 0 ) % If these deviate much, one is wrong
     disp("WARNING: F and F2 differ - at least one of them is incorrect")
 end
 
@@ -177,13 +177,13 @@ elseif plot_pullrod_rock_length == true
 end
 
 %% Motion Ratio Calculations
-r_rocker_shockside = 75;
-rocker_link_angle = 90;    % the angle between the two rocker links (ANIMIATION)
+r_rocker_shockside = 128;
+rocker_link_angle = 135;    % the angle between the two rocker links (ANIMIATION)
 shock_mount_pos = O_R -.75*r_rocker_shockside + 1i*(25.4*7.7);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
 R9 = exp(1i*(VTh7 - D2R*rocker_link_angle)) * r_rocker_shockside;  % Rocker Shock-Side link
 G = O_R + R9;
 shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
-spring_velocity = diff(shock_length);
+spring_dx = diff(shock_length);
 
 subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
 plot(1:length(VL_pullrod),VTh7*R2D)
@@ -242,13 +242,41 @@ end
 
 %% Motion Ratio Optimization
 % subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
-MR_RANGE = false;
-MR_RANGE_3D = true;
+SINGLE_MR_PLOT = true;
+MR_RANGE = true;
+MR_RANGE_3D = false;
+
+
+if SINGLE_MR_PLOT
+    figure(3)
+    clf
+    shock_mount_pos = O_R -.75.*r_rocker_shockside + 1i*(25.4*7.7);
+    bump_velocity = diff(bump);
+    shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
+    spring_dx = diff(shock_length);
+    motion_ratio = spring_dx ./ bump_velocity;
+    plot(bump(2:end),motion_ratio)
+    xticks(0-60:10:60)%, yticks(linspace( (round(min(spring_velocity),1,'significant')), max(spring_velocity) ,10 ) )
+    ylim([.3,1.5])
+    yticks(.3:.1:1.5)
+
+
+    title("Motion Ratio vs Wheel Displacement")
+    xlabel("Vertical Wheel Displacement [mm]")
+    ylabel("Motion Ratio")
+    grid on
+end
 
 if MR_RANGE
-    figure(3)
-    rock_angle = linspace(90,160,7);     % The angle between the pullrod hole, the rocker axis, and the rocker shock mounting hole
-    r_shock = linspace(30,150,7);        % The radius from the rocker axis to the shock hole
+    num_changes = 5
+    
+    figure(4)
+    clf
+    untouched_rocker_link_angle = rocker_link_angle;
+    untouched_r_rocker_shockside = r_rocker_shockside;
+
+    rock_angle = linspace(rocker_link_angle - 10, rocker_link_angle + 7, num_changes);     % The angle between the pullrod hole, the rocker axis, and the rocker shock mounting hole
+    r_shock = linspace(r_rocker_shockside - 10,r_rocker_shockside + 10, num_changes);        % The radius from the rocker axis to the shock hole
     
     
 %   This section iterates over an array change_vals which contains values for each optimization variable. Each 'slice' 
@@ -259,8 +287,8 @@ if MR_RANGE
 %       change_vals(:,:,2) = [mean(rock_angle)*ones(size(r_shock)); r_shock];
 
 %       optimization variables: [r_rocker_shockside, rocker angle]
-    change_vals =        [mean(r_shock)*ones(size(rock_angle)); rock_angle];     % constant shock radius, varying rocker angle
-    change_vals(:,:,2) = [r_shock;                              mean(rock_angle)*ones(size(r_shock))];
+    change_vals =        [untouched_r_rocker_shockside*ones(size(rock_angle)); rock_angle];     % constant shock radius, varying rocker angle
+    change_vals(:,:,2) = [r_shock;                              untouched_rocker_link_angle*ones(size(r_shock))];
     
     clf % clear current figure
     changevars = 2; % number of variables to plot over
@@ -277,9 +305,9 @@ if MR_RANGE
             R9 = exp(1i*(VTh7 - D2R.*rocker_link_angle)) .* r_rocker_shockside;  % Rocker Shock-Side link
             G = O_R + R9;
             shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
-            spring_velocity = diff(shock_length);
+            spring_dx = diff(shock_length);
             bump_velocity = diff(bump);
-            motion_ratio = spring_velocity ./ bump_velocity;
+            motion_ratio = spring_dx ./ bump_velocity;
             
             % plot
             plot(bump(2:end),motion_ratio)
@@ -299,6 +327,7 @@ if MR_RANGE
     end
     
     
+% This is an attempt at 3d optimization, but it is flawed 
 elseif MR_RANGE_3D
     surf_anim = true;
     
@@ -317,13 +346,14 @@ elseif MR_RANGE_3D
             shock_mount_pos = O_R -.75.*r_rocker_shockside + 1i*(25.4*7.7);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
             R9 = exp(1i*(VTh7 - D2R.*rocker_link_angle)) .* r_rocker_shockside;  % Rocker Shock-Side link
             G = O_R + R9;
-            spring_velocity = diff(( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5);  % spring length vs index
+            spring_dx = diff(( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5);  % spring length vs index
             bump_velocity = diff(bump);
-            motion_ratio = spring_velocity ./ bump_velocity;
+            motion_ratio = spring_dx ./ bump_velocity;
             ZZ(i,j,:) = motion_ratio;
         end
     end
-    figure(4)
+    figure(5)
+    clf
     surf(X,Y,ZZ(:,:,51))
     xlabel("Rocker Link Angle"), ylabel("Shock Side Length"), zlabel("Motion Ratio")
 %     if surf_anim  
@@ -332,20 +362,11 @@ elseif MR_RANGE_3D
 
     title("Motion Ratio vs Wheel Displacement")
     grid on
-else
-    plot(bump(2:end),spring_velocity)
-    xticks(0-60:10:60)%, yticks(linspace( (round(min(spring_velocity),1,'significant')), max(spring_velocity) ,10 ) )
-    ylim([.3,1.5])
-    yticks(.3:.1:1.5)
-
-
-    title("Motion Ratio vs Wheel Displacement")
-    grid on
 end
 
 
-% re-set vars overwritten by optimization (INCOMPLETE)
-rocker_link_angle = 90;    % the angle between the two rocker links (ANIMIATION)
+% re-set vars overwritten by optimization (INCOMPLETE) (Animation runs after the fact, so vars used by it must be reset)
+rocker_link_angle = 90;    % the angle between the two rocker links 
 shock_mount_pos = O_R -.75*r_rocker_shockside + 1i*(25.4*7.7);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
 R9 = exp(1i*(VTh7 - D2R*rocker_link_angle)) * r_rocker_shockside;  % Rocker Shock-Side link
 
