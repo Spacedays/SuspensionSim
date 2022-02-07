@@ -176,6 +176,10 @@ elseif plot_pullrod_rock_length == true
     grid on
 end
 
+%% 3D Forces
+
+S3D = Suspension_3D()
+
 %% Motion Ratio Calculations
 r_rocker_shockside = 128;
 rocker_link_angle = 135;    % the angle between the two rocker links (ANIMIATION)
