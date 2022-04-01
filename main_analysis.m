@@ -80,7 +80,7 @@ rocker_axis_pos = [15,27]; %[-15.4,40.8];   % x,y wrt lower right A-arm mount [m
 O_R = A + ones(1,length(VTh3))*(rocker_axis_pos(1) + 1i*rocker_axis_pos(2));    % Rocker axis of rotation
 
 rocker_pull_radius = 30;   	% Distance from the rocker axis to the pullrod [mm]
-l_pullrod = 260;            % Pullrod length [mm]
+l_pullrod = 270;            % Pullrod length [mm]
 pullrod_upright_off = [-65 -20.64];    % pullrod mount x,y offset from upper upright suspension link (point D)
 pullrod_Aarm_r = 65;            % Length offset from the upper A-arm mount along the plane of the upper A-Arm
 pullrod_Aarm_vert = -20.64;          % Perpendicular offset of the pullrod A-Arm mount; measured perpendicular to the Upper A-Arm
@@ -93,8 +93,51 @@ pullrod_Aarm_vert = -20.64;          % Perpendicular offset of the pullrod A-Arm
 R5 = -pullrod_Aarm_r * exp(1i*VTh2) + pullrod_Aarm_vert * exp(1i*(VTh2+pi/4));
 E = D + R5;
 
+%% motion solver - New Fast & correct linkage vector
+vers2 = true
+
+if vers2
+% Setup drivingLinkageVector Vers 2
+
+V_rP3 = sqrt(real(E-O_R).^2 + imag(E-O_R).^2);
+V_thP3 = atan2(imag(E-O_R), real(E-O_R));
+V_rP2 = rocker_pull_radius .* ones(size(V_rP3));
+V_thP2 = NaN(size(V_rP3));
+V_rP1 = l_pullrod .* ones(size(V_rP3));
+V_thP1 = NaN(size(V_rP3));
+
+initGuesses2 = [20*D2R, 90*D2R];  % ((Th6 Th7))
+
+drivingLinkageVector2 = zeros(2,3,length(V_rP3));
+drivingLinkageVector2(1,:,:) = [V_rP1; V_rP2; V_rP3];
+drivingLinkageVector2(2,:,:) = [V_thP1; V_thP2; V_thP3];
+
+% Linkage Loop Eqn: F->E, F->O_R, O_R->E
+RL2 = NBarLinkage([V_rP1(1) V_rP2(1) V_rP3(1); NaN NaN V_thP3(1)], [1,3], initGuesses2, PosVectors=[0 1 1]);         % Make RockerLinkage
+
+
+[VTh6, VTh7] = CalcChangingLinkage(RL2,drivingLinkageVector2);
+
+Th5 = atan2(pullrod_upright_off(2),pullrod_upright_off(1));  % Angle of the vector from upper upright susp. link to pullrod mount
+VTh5 = Th5*ones(size(V_rP3));
+VTh6 = squeeze(VTh6)';
+VTh7 = squeeze(VTh7)';
+
+r6 = V_rP1;
+r7 = V_rP2;
+
+R6 = r6.*exp(1i.*VTh6);
+R7 = r7.*exp(1i*VTh7);
+R8 = D - O_R;
+
+%Two methods for finding point F - if one fails for an unknown reason try the other
+F = E - R6;
+F2 = O_R - R7;
+
+else
+%% -- Original (bad & slow) method using 4 vectors
 % Setup drivingLinkageVector
-Vr8 = ((real(D)-real(O_R)).^2+(imag(D)-imag(O_R)).^2).^0.5;   r8 = Vr8(1);  % Distance from rocker axis to upper upright susp. link
+Vr8 = ((real(D)-real(O_R)).^2+(imag(D)-imag(O_R)).^5).^0.5;   r8 = Vr8(1);  % Distance from rocker axis to upper upright susp. link
 r5 = sum(pullrod_upright_off.^2).^0.5;  Vr5 = r5*ones(size(Vr8));           % Distance from upper upright suspension link to pullrod mount
 r6 = l_pullrod; Vr6 = r6*ones(size(Vr8));
 r7 = rocker_pull_radius;    Vr7 = r7*ones(size(Vr8));
@@ -127,11 +170,25 @@ F = E - R6;%E - R6;
 F2 = O_R - R7;
 
 VTh7_2 = atan2(imag(O_R-F2),real(O_R-F2));
+end
 
-
-
-if (length((real(F-F2).^2 + imag(F-F2).^2).^0.5 > 1) > 0 ) % If these deviate much, one is wrong
+if (sum((real(F-F2).^2 + imag(F-F2).^2).^0.5 > 1) > 0 ) % If these deviate much, one is wrong
     disp("WARNING: F and F2 differ - at least one of them is incorrect")
+    
+    figure(6)
+    R6B = F2-E;
+    R7B = F2-O_R;
+    plot(1:length(R5),(real(R5).^2 + imag(R5).^2).^.5);
+    hold on
+    plot(1:length(R5),(real(R6).^2 + imag(R6).^2).^.5);
+    plot(1:length(R5),(real(R6B).^2 + imag(R6B).^2).^.5);
+    plot(1:length(R5),(real(R7).^2 + imag(R7).^2).^.5);
+    plot(1:length(R5),(real(R7B).^2 + imag(R7B).^2).^.5);
+
+    title("Rocker Linkage length vs idx")
+    legend("`Link5","Link6 (F->E)","Link6B (F2->E)","Link7 (F->O_R)","Link7B (F2->O_R)")
+    hold off
+
 end
 
 %% Sanity check to ensure mechanisms arent't stretching - If it is correct, the pullrod length and rocker length should be constant
@@ -215,11 +272,11 @@ shock_mount_pos = O_R - 210 + 1i*(-20);   %Shock mount pos wrt to rocker rotatio
 VTh9 = VTh7 + rocker_link_angle*D2R;
 R9 = exp(1i*VTh9) .* r_rocker_shockside;  % Rocker Shock-Side link
 
-VTh9_2 = VTh7_2 - rocker_link_angle*D2R;
-R9_2 = exp(1i*VTh9_2) .* r_rocker_shockside;
+% VTh9_2 = VTh7_2 - rocker_link_angle*D2R;
+% R9_2 = exp(1i*VTh9_2) .* r_rocker_shockside;
 
 G = O_R + R9;
-G2 = O_R + R9_2;
+% G2 = O_R + R9_2;
 shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
 spring_dx = diff(shock_length);
 
@@ -278,8 +335,8 @@ drawPtLabels = true;
 
 if plotlinkage || plotslice
     
-    %   link #:     1     2     3     4     5     6      7       8       9          10              11      12       13       14
-    links = cat(3,[A;B],[B;D],[A;C],[C;D],[D;E],[F;E],[F;O_R],[WM;WC],[G;O_R],[G;shock_mount_pos],[E;F2],[F2;O_R],[WC;WCP]);%,[G2;O_R]);
+    %   link #:     1     2     3     4     5     6      7       8       9           10              11      12      13       14
+    links = cat(3,[A;B],[B;D],[A;C],[C;D],[D;E],[F;E],[F;O_R],[WM;WC],[G;O_R],[G;shock_mount_pos],[WC;WCP],[E;F2],[F2;O_R]);%,[G2;O_R]);
     links = permute(links,[1 3 2]);     % Rearrange links to result in array: 2 x NumBars x NumIndexes
                                         % row 1 is the starting point, row 2 is end
     xlinks = real(links);
@@ -288,7 +345,7 @@ if plotlinkage || plotslice
     midpts(2,:,:) = imag(midpts);   midpts(1,:,:) = real(midpts(1,:,:));
     
     % Setup vector labelling
-    labelledVecs = [6,11,7,12];%,9,14];
+    labelledVecs = [6,12,7,13];%,9,14];
     vecLabels = ["R6","R6B","R7","R7B"]; %,"R9","R9B"];
     LTxtOps = ["VerticalAlignment","top","HorizontalAlignment","left"];     % Options for left text placement
     RTxtOps = ["VerticalAlignment","top","HorizontalAlignment","right"];    % Options for right text placement
@@ -432,20 +489,6 @@ if plotlinkage || plotslice
 end
 
 %%
-figure(6)
-R6B = F2-E;
-R7B = F2-O_R;
-plot(1:length(R5),(real(R5).^2 + imag(R5).^2).^.5);
-hold on
-plot(1:length(R5),(real(R6).^2 + imag(R6).^2).^.5);
-plot(1:length(R5),(real(R6B).^2 + imag(R6B).^2).^.5);
-plot(1:length(R5),(real(R7).^2 + imag(R7).^2).^.5);
-plot(1:length(R5),(real(R7B).^2 + imag(R7B).^2).^.5);
-
-title("Rocker Linkage length vs idx")
-legend("`Link5","Link6 (F->E)","Link6B (F2->E)","Link7 (F->O_R)","Link7B (F2->O_R)")
-hold off
-
 figure(7)
 title("Rocker Linkage Angle vs idx ")
 hold on
