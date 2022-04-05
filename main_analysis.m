@@ -262,14 +262,14 @@ end
 
 %% Motion Ratio Calculations
 r_rocker_shockside = 80;   % mm
-rocker_link_angle = 120;    % the angle between the two rocker links (ANIMIATION)
+rocker_link_angle = 155;    % the angle between the two rocker links (ANIMIATION)
 % shock_mount_pos = O_R +.75*r_rocker_shockside + 1i*(25.4*7.7);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
 shock_mount_pos = O_R - 210 + 1i*(-20);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
 % shock_mount_pos = O_R -.75.*r_rocker_shockside + 1i*(25.4*7.7);
 
 % if ()
 
-VTh9 = VTh7 + rocker_link_angle*D2R;
+VTh9 = rocker_link_angle*D2R - (pi - VTh7);
 R9 = exp(1i*VTh9) .* r_rocker_shockside;  % Rocker Shock-Side link
 
 % VTh9_2 = VTh7_2 - rocker_link_angle*D2R;
@@ -295,8 +295,10 @@ MR_RANGE = true;
 MR_RANGE_3D = false;
 
 if SINGLE_MR_PLOT
-    figure(4)
-    clf
+%     figure(4)
+%     clf
+    subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+
 %     shock_mount_pos = O_R -.75.*r_rocker_shockside + 1i*(25.4*7.7);
 %     shock_mount_pos = O_R - 190 + 1i*(-20);
     bump_velocity = diff(bump);
@@ -345,12 +347,12 @@ if plotlinkage || plotslice
     midpts(2,:,:) = imag(midpts);   midpts(1,:,:) = real(midpts(1,:,:));
     
     % Setup vector labelling
-    labelledVecs = [6,12,7,13];%,9,14];
-    vecLabels = ["R6","R6B","R7","R7B"]; %,"R9","R9B"];
+    labelledVecs = [6,7];    % useful Pullrod Debug values: (B-vers of linkage) [6,12,7,13]; %,9,14];
+    vecLabels = ["R6","R7"]; % useful Pullrod Debug values:         ["R6","R6B","R7","R7B"]; %,"R9","R9B"]; 
     LTxtOps = ["VerticalAlignment","top","HorizontalAlignment","left"];     % Options for left text placement
     RTxtOps = ["VerticalAlignment","top","HorizontalAlignment","right"];    % Options for right text placement
-    LVecs = logical([1 0 1 0]); %1:2:length(labelledVecs);     % left text
-    RVecs = ~LVecs;             %2:2:length(labelledVecs);    % right text
+    LVecs = logical([1 0]); % left text     - useful debug values: [1 0 1 0]
+    RVecs = ~LVecs;             % right text
     
     vecXL = squeeze(midpts(1,labelledVecs(LVecs),:));
     vecXR = squeeze(midpts(1,labelledVecs(RVecs),:));
@@ -360,9 +362,9 @@ if plotlinkage || plotslice
 %     text(vecXl(1,:,t), vecYl(1,:,t), vecLabels(labelledVecs(lVecs)),LTxtOps{:});
     
     % Setup Point labeling
-    labelledPts = [F' F2' O_R']';
-    ptLabels = ["F","F2","O_R"];
-    LPts = logical([1 0 1]);
+    labelledPts = [F' O_R']';   % Pullrod Debug values: [F' F2' O_R']';
+    ptLabels = ["F","O_R"];     % Pullrod Debug values: ["F","F2","O_R"];
+    LPts = logical([1 1]);      % Pullrod Debug values: [1 0 1] }
     RPts = ~LPts;
     
     xLPts = real(labelledPts(LPts,:));
@@ -377,11 +379,11 @@ if plotlinkage || plotslice
         RLabels = [vecLabels(RVecs) ptLabels(RPts)];
         
         % X left & right pts
-        XL = [vecXL' xLPts']';
-        XR = [vecXR' xRPts']';
+        XL = [vecXL xLPts']';
+        XR = [vecXR xRPts']';
         % Y left & right pts
-        YL = [vecYL' yLPts']';
-        YR = [vecYR' yRPts']';
+        YL = [vecYL yLPts']';
+        YR = [vecYR yRPts']';
         
     elseif drawVecLabels
 %         labeledStuff = labelledVecs;
@@ -536,7 +538,7 @@ function [] = Rocker_Range(VTh7, O_R, shock_mount_pos, bump, rocker_link_angle, 
             rocker_link_angle = change_vals(2,i,iter);    % the angle between the two rocker links
             
             % Recalculate results
-            R9 = exp(1i*(VTh7 + D2R.*rocker_link_angle)) .* r_rocker_shockside;     % Rocker Shock-Side link
+            R9 = exp(1i*(rocker_link_angle*D2R - (pi - VTh7))) .* r_rocker_shockside;     % Rocker Shock-Side link
             G = O_R + R9;
             shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
             spring_dx = diff(shock_length);
