@@ -97,7 +97,7 @@ classdef NBarLinkage
             out = [real(eqn); imag(eqn)];
         end
         
-        function out = LinkageEqn2(Obj, X)      % Function defined using geometry values from the obj's linkage array
+        function out = LinkageEqn2(Obj, X)      % Function defined using geometry values from the obj's linkage array - theoretically unbounded size
             % Vectorized LinkageEqn
             
             % Updates the unknowns' position to the previous guess
@@ -112,10 +112,6 @@ classdef NBarLinkage
         function out = LinkageBCEqn(Obj, X)      % Fxn using Obj.linkage and a boundary condition eqn
             out = linkageEqn(Obj,X);
             
-        end
-        
-        function MakeLinkageBCEqn()
-        
         end
         
         function [unknown1, unknown2] = CalcLinkage(Obj,drivingVarValue,DrivingVar) % Use this function to calculate a linkage position

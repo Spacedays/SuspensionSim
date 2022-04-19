@@ -13,7 +13,7 @@ figure(1);
 
 
 %% Kinematics Setup
-numpts = 40
+numpts = 40     % Number of displacement points calculated. ~~= resolution
 
 D2R = pi/180;    %deg 2 radians
 R2D = 180/pi;
@@ -23,8 +23,8 @@ R2D = 180/pi;
 Th1 = 63.0056*D2R; %63.01*D2R;% acos(80.83/137.5);
 Th3 = 0;   % Driving Input Starting Value ((var will be iterated over))
 r1 = 160.3174; %6.282*25.4;    % mm
-r2 = 274.4; %12*25.4;
-r3 = 343; %15*25.4;
+r2 = 270.69;
+r3 = 339.52; %15*25.4;
 r4 = 190.5; %7.5*25.4;
 
 initGuesses = [10*D2R,90*D2R]; %Theta 2 and Theta 4 initial guesses
@@ -48,25 +48,26 @@ R4 = r4*ones(1,length(VTh3)).*exp(1i.*VTh4);
 
 %% Camber Calcs
 figure(1)
-subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
-camber = atand((real(D)-real(C))./(imag(D)-imag(C)));
-plot(bump,camber)
+% subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+static_camber = -2;
+camber = atand((real(D)-real(C))./(imag(D)-imag(C))) + static_camber;
+plot(bump,camber,'linewidth',2)
 grid on
 title("Camber vs Wheel Displacement")
 xlabel("Wheel Displacement [mm]"), ylabel("Camber [deg]")
-xticks(-40:10:40), yticks(-4:1:3)
+xticks(-50:10:50), yticks(-4:1:3)
 
 %% Scrub Calcs
-wheel_dx = (1+3.5)*25.4;
+wheel_dx = 109; % mm; distance from Upright A-Arm Mounts centerline
 wheel_r = 10*25.4;
 WM = C + .5 .* R4; % Wheel Mount Location
 WC = WM + wheel_dx .* exp(1i.*(VTh4 - pi/2));    % Wheel centerline
 WCP = WC + wheel_r .* exp(1i.* (VTh4 + pi));
 
-% figure(2)
-subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+figure(2)
+% subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
 % plot(VTh3*R2D, (real(WCP)-min(real(WCP))));
-plot(bump, (real(WCP) - real(WCP(zci(bump))) ) )
+plot(bump, (real(WCP) - real(WCP(zci(bump))) ),'linewidth',2)
 % title("Wheel Scrub vs. \theta_3")
 title("Wheel Scrub vs. Wheel Displacement")
 % xlabel("\theta_3 [deg]"), ylabel("Wheel Scrub [mm]")
@@ -76,24 +77,27 @@ grid on
 
 
 %% Pull Rod Calculations
-rocker_axis_pos = [15,27]; %[-15.4,40.8];   % x,y wrt lower right A-arm mount [mm] 
-O_R = A + ones(1,length(VTh3))*(rocker_axis_pos(1) + 1i*rocker_axis_pos(2));    % Rocker axis of rotation
+rocker_axis_r = 31.9; %[-15.4,40.8];   % x,y of rocker origin axis wrt lower right A-arm mount [mm] 
+rocker_axis_th = 115*D2R;
+chassis_tab_dx = 24;
+
+% O_R = A + ones(1,length(VTh3))*(rocker_axis_pos(1) + 1i*rocker_axis_pos(2));    % Rocker axis of rotation
+O_R = A + ones(1,length(VTh3))*(rocker_axis_r.*exp(1i * rocker_axis_th)) - chassis_tab_dx;
 
 rocker_pull_radius = 30;   	% Distance from the rocker axis to the pullrod [mm]
-l_pullrod = 270;            % Pullrod length [mm]
-pullrod_upright_off = [-65 -20.64];    % pullrod mount x,y offset from upper upright suspension link (point D)
-pullrod_Aarm_r = 65;            % Length offset from the upper A-arm mount along the plane of the upper A-Arm
-pullrod_Aarm_vert = -20.64;          % Perpendicular offset of the pullrod A-Arm mount; measured perpendicular to the Upper A-Arm
+l_pullrod = 330;            % Pullrod length [mm]
 
+r5 = 68.198;                % Radius from the upper A-arm spherical to the A-Arm pullrod heim joint
+pullrod_Aarm_angle = 17.615*D2R;
+R5 = r5 * exp(1i*(VTh2+pi+pullrod_Aarm_angle));
 
 % rocker_axis_pos, O_R, rocker_pull_radius, l_pullrod, pullrod_upright_off, pullrod_Aarm_r, pullrod_Aarm_vert
 
 
-% E = D + pullrod_upright_off(1) + imag(pullrod_upright_off(2);      % Pull Rod Attachment Point (point E) based on upright
-R5 = -pullrod_Aarm_r * exp(1i*VTh2) + pullrod_Aarm_vert * exp(1i*(VTh2+pi/4));
+% R5 = -pullrod_Aarm_r * exp(1i*VTh2) + pullrod_Aarm_vert * exp(1i*(VTh2+pi/4));
 E = D + R5;
 
-%% motion solver - New Fast & correct linkage vector
+%% motion solver - New Fast & correct linkage loop w/ 3 vectors
 vers2 = true
 
 if vers2
@@ -106,7 +110,7 @@ V_thP2 = NaN(size(V_rP3));
 V_rP1 = l_pullrod .* ones(size(V_rP3));
 V_thP1 = NaN(size(V_rP3));
 
-initGuesses2 = [20*D2R, 90*D2R];  % ((Th6 Th7))
+initGuesses2 = [20*D2R, 250*D2R];  % ((Th6 Th7))
 
 drivingLinkageVector2 = zeros(2,3,length(V_rP3));
 drivingLinkageVector2(1,:,:) = [V_rP1; V_rP2; V_rP3];
@@ -118,8 +122,8 @@ RL2 = NBarLinkage([V_rP1(1) V_rP2(1) V_rP3(1); NaN NaN V_thP3(1)], [1,3], initGu
 
 [VTh6, VTh7] = CalcChangingLinkage(RL2,drivingLinkageVector2);
 
-Th5 = atan2(pullrod_upright_off(2),pullrod_upright_off(1));  % Angle of the vector from upper upright susp. link to pullrod mount
-VTh5 = Th5*ones(size(V_rP3));
+
+VTh5 = atan2(imag(R5),real(R5));    % Angle of the vector from upper upright susp. link to pullrod mount
 VTh6 = squeeze(VTh6)';
 VTh7 = squeeze(VTh7)';
 
@@ -135,13 +139,13 @@ F = E - R6;
 F2 = O_R - R7;
 
 else
-%% -- Original (bad & slow) method using 4 vectors
+%% -- Original (unreliable & slow) method using 4 vectors
 % Setup drivingLinkageVector
 Vr8 = ((real(D)-real(O_R)).^2+(imag(D)-imag(O_R)).^5).^0.5;   r8 = Vr8(1);  % Distance from rocker axis to upper upright susp. link
-r5 = sum(pullrod_upright_off.^2).^0.5;  Vr5 = r5*ones(size(Vr8));           % Distance from upper upright suspension link to pullrod mount
+%r5           % Distance from upper upright suspension link to pullrod mount
 r6 = l_pullrod; Vr6 = r6*ones(size(Vr8));
 r7 = rocker_pull_radius;    Vr7 = r7*ones(size(Vr8));
-Th5 = atan2(pullrod_upright_off(2),pullrod_upright_off(1));  % Angle of the vector from upper upright susp. link to pullrod mount
+VTh5 = atan2(imag(R5),real(R5));  % Angle of the vector from upper upright susp. link to pullrod mount
 if (isnan(Th5)), Th5 = 0; elseif (Th5 < 0), Th5 = Th5 + 360*D2R; end
 VTh5 = Th5*ones(size(Vr8));
 VTh6 = NaN*ones(size(Vr8));
@@ -216,9 +220,11 @@ VL_pullrod_rock = ((real(F) - real(O_R)).^2 + (imag(F) - imag(O_R)).^2).^0.5; % 
 
 plot_pullrod_length = true; plot_pullrod_rock_length = plot_pullrod_length;
 
+stretching = false
 if (max(VL_pullrod_rock) - min(VL_pullrod_rock) > 1 | max(VL_pullrod) - min(VL_pullrod) > 1)
+    stretching = true;
     subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
-    plot(1:length(VL_pullrod), VL_pullrod, 1:length(VL_pullrod_rock), VL_pullrod_rock)
+    plot(1:length(VL_pullrod), VL_pullrod, 1:length(VL_pullrod_rock), VL_pullrod_rock,'linewidth',2)
     title("Pullrod / Rocker-Pull Link Length vs Idx")
     legend("Pullrod Len", "Pullrod-Rock Len", "location","best")
     xlabel("Index")
@@ -226,7 +232,7 @@ if (max(VL_pullrod_rock) - min(VL_pullrod_rock) > 1 | max(VL_pullrod) - min(VL_p
 end
 
 
-%%
+%% Old/unworking calculations to detect mechanism solve errors
 % if max(VL_pullrod) - min(VL_pullrod) > 1	% if the pullrod stretches by more than 1mm, plot length vs index
 %     plot_pullrod_length = true;
 % elseif 
@@ -256,18 +262,20 @@ end
 %     grid on
 % end
 
-%% 3D Forces
+%% 3D Forces (not implemented)
 
 %S3D = Suspension_3D()
 
 %% Motion Ratio Calculations
-r_rocker_shockside = 80;   % mm
-rocker_link_angle = 155;    % the angle between the two rocker links (ANIMIATION)
+r_rocker_shockside = 145;   % mm
+rocker_link_angle =40;%155;     % the angle between the two rocker links, measured CW from positive horizontal axis
 % shock_mount_pos = O_R +.75*r_rocker_shockside + 1i*(25.4*7.7);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
-shock_mount_pos = O_R - 210 + 1i*(-20);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
-% shock_mount_pos = O_R -.75.*r_rocker_shockside + 1i*(25.4*7.7);
 
-% if ()
+% Config A (see paper)
+shock_mount_pos = O_R + 87.08 + 1i*(230.25);   %Shock mount pos wrt to rocker rotation axis; shock max len = 260mm
+% Config B (see paper)
+% shock_mount_pos = O_R + 75 + 1i*(180);
+
 
 VTh9 = rocker_link_angle*D2R - (pi - VTh7);
 R9 = exp(1i*VTh9) .* r_rocker_shockside;  % Rocker Shock-Side link
@@ -280,13 +288,15 @@ G = O_R + R9;
 shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
 spring_dx = diff(shock_length);
 
-subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
-plot(1:length(VL_pullrod),VTh7*R2D)
+% subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+figure(3)
+plot(1:length(VL_pullrod),VTh7*R2D,'linewidth',2)
 title("Rocker Angle vs Index")
 xticks(0:10:100), yticks( (round(min(VTh7*R2D),2,"significant")-5):5:max(VTh7*R2D)+5  )
 grid on
-sa = min(shock_length); sb = max(shock_length);
-fprintf("=== Shock Length ===\n\tmin: %.1f\n\tMax: %.1f\n\tDiff: %.1f \nover %.f mm of travel\n",sa, sb, sb-sa, max(bump)-min(bump));
+smin = min(shock_length); smax = max(shock_length);
+fprintf("=== Shock Length ===\n\tmin: %.1f\n\tMax: %.1f\n\tDiff: %.1f \nover %.f mm of travel\n",smin, smax, smax-smin, max(bump)-min(bump));
+
 
 %% Motion Ratio Optimization
 % subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
@@ -295,9 +305,9 @@ MR_RANGE = true;
 MR_RANGE_3D = false;
 
 if SINGLE_MR_PLOT
-%     figure(4)
+    figure(4)
 %     clf
-    subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
+%     subplot(SPRows,SPCols,sub_idx);   sub_idx = sub_idx+1;
 
 %     shock_mount_pos = O_R -.75.*r_rocker_shockside + 1i*(25.4*7.7);
 %     shock_mount_pos = O_R - 190 + 1i*(-20);
@@ -305,15 +315,20 @@ if SINGLE_MR_PLOT
     shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
     spring_dx = diff(shock_length);
     motion_ratio = abs(spring_dx) ./ abs(bump_velocity);
-    plot(bump(2:end),motion_ratio)
+    plot(bump(2:end),motion_ratio,"linewidth",2)
     xticks(0-60:10:60)%, yticks(linspace( (round(min(spring_velocity),1,"significant")), max(spring_velocity) ,10 ) )
-    ylim([.3,1.5])
-    yticks(.3:.1:1.4)
+    
+    interval = .05;  % distance between plot ticks
+    ymax = ceil(max(motion_ratio)/interval)*interval;   % round up to nearest interval
+    ymin = floor(min(motion_ratio)/interval)*interval;  % round down to nearest interval 
+    
+    ylim([ymin-interval,ymax+interval])
+    yticks(ymin-4*interval:interval:ymax+4*interval)
 
 
     title("Motion Ratio vs Wheel Displacement")
     xlabel("Vertical Wheel Displacement [mm]")
-    ylabel("Motion Ratio")
+    ylabel("Motion Ratio (Shock / Wheel ratio)")
     grid on
 
 end
@@ -322,21 +337,18 @@ if MR_RANGE
 end
 
 
-
 %% Animation
 
-% Determine the positions of the four 
-% revolute joints at each iteration
 plotlinkage = true;
 plotslice = true;
-silce_rainbowplot = true;
+silce_rainbowplot = false;
 
 drawlabels = true;
 drawVecLabels = true;
 drawPtLabels = true;
 
 if plotlinkage || plotslice
-    
+    %% Setup Links
     %   link #:     1     2     3     4     5     6      7       8       9           10              11      12      13       14
     links = cat(3,[A;B],[B;D],[A;C],[C;D],[D;E],[F;E],[F;O_R],[WM;WC],[G;O_R],[G;shock_mount_pos],[WC;WCP],[E;F2],[F2;O_R]);%,[G2;O_R]);
     links = permute(links,[1 3 2]);     % Rearrange links to result in array: 2 x NumBars x NumIndexes
@@ -346,7 +358,7 @@ if plotlinkage || plotslice
     midpts = mean(links,1); % used in vector labelling
     midpts(2,:,:) = imag(midpts);   midpts(1,:,:) = real(midpts(1,:,:));
     
-    % Setup vector labelling
+    %% Setup vector labelling
     labelledVecs = [6,7];    % useful Pullrod Debug values: (B-vers of linkage) [6,12,7,13]; %,9,14];
     vecLabels = ["R6","R7"]; % useful Pullrod Debug values:         ["R6","R6B","R7","R7B"]; %,"R9","R9B"]; 
     LTxtOps = ["VerticalAlignment","top","HorizontalAlignment","left"];     % Options for left text placement
@@ -361,12 +373,13 @@ if plotlinkage || plotslice
     
 %     text(vecXl(1,:,t), vecYl(1,:,t), vecLabels(labelledVecs(lVecs)),LTxtOps{:});
     
-    % Setup Point labeling
+    %% Setup Point labeling
     labelledPts = [F' O_R']';   % Pullrod Debug values: [F' F2' O_R']';
     ptLabels = ["F","O_R"];     % Pullrod Debug values: ["F","F2","O_R"];
-    LPts = logical([1 1]);      % Pullrod Debug values: [1 0 1] }
+    LPts = logical([1 1]);      % Pts labelled to the (L)eft and (R)ight of the point -- Pullrod Debug values: [1 0 1] }
     RPts = ~LPts;
     
+    % x/y vectors for points labelled to the (L)eft and (R)ight of the point
     xLPts = real(labelledPts(LPts,:));
     xRPts = real(labelledPts(RPts,:));
     yLPts = imag(labelledPts(LPts,:));
@@ -374,7 +387,6 @@ if plotlinkage || plotslice
     
     
     if drawVecLabels && drawPtLabels
-%         labeledStuff = [labelledVecs labelledPts];
         LLabels = [vecLabels(LVecs) ptLabels(LPts)];
         RLabels = [vecLabels(RVecs) ptLabels(RPts)];
         
@@ -386,7 +398,6 @@ if plotlinkage || plotslice
         YR = [vecYR yRPts']';
         
     elseif drawVecLabels
-%         labeledStuff = labelledVecs;
         LLabels = LVecs;
         RLabels = RVecs;
         
@@ -397,7 +408,6 @@ if plotlinkage || plotslice
         YL = vecYL;
         YR = vecYR;
     elseif drawPtLabels
-%         labeledStuff = labelledPts;
         LLabels = ptLabels(LPts);
         RLabels = ptLabels(RPts);
         
@@ -408,15 +418,16 @@ if plotlinkage || plotslice
         YL = yLPts;
         YR = yRPts;
     else
-%         labeledStuff = [];
         LLabels = [];
         RLabels = [];
     end
     
+    %% Seutp Animation/Plot
     
-    % Store plot handles to color-code lines via group (and maybe for speed?)
-    h = cell(1,size(links,3));   % create cell array for line handles
-    pullrod = 6;
+    % Store plot handles to color-code lines via group
+    h = cell(1,size(links,3));   % create cell array for storage and modification of line handles
+    pullrod_idx = [6];
+    shock_idx = [10];
     rocker_links = [7,9];
     secondary_pullrod_linkage = [11,12]; %,14];
                                 
@@ -435,11 +446,13 @@ if plotlinkage || plotslice
     ymin = ymin-Space;
     ymax = ymax+Space;
 
-    % Mechanism Animation
-%     figure(3) %2)%"WindowState","maximized") % Large Figure
-    figure(3)    
+    %% Mechanism Animation or plotting
+    
+%     figure(3) %"WindowState","maximized") % Large Figure
+    figure(6)    
     grid on
     if plotlinkage
+        %% Plot the linkage animation
         % TODO: ideas for later:
         %   1. update line positions instead of redrawing (if not fast enough)
         %   2. plot tubing sizes, etc (especially static stuff like chassis)
@@ -449,7 +462,7 @@ if plotlinkage || plotslice
             h{t} = plot(xlinks(:,:,t), ylinks(:,:,t),"b","LineWidth",2);
             set(h{t}(rocker_links),"Color",[0,.75,.5]);% = repmat([1 0 0],length(pullrod_linkage),1);    % Color the pullrod linkage
 %             set(h{t}(secondary_pullrod_linkage),"Color",[.75,0,.75]);
-            set(h{t}(pullrod),"Color",[1,0,0])
+            set(h{t}(pullrod_idx),"Color",[1,0,0])
             
             if drawlabels
             % Label vectors at midpoint
@@ -465,22 +478,22 @@ if plotlinkage || plotslice
         end
     
     elseif plotslice
+        %% Plot a middle slice of the linkage
         t = round(length(links)/2);
         if silce_rainbowplot
-            plot(real(links(:,:,t)), imag(links(:,:,t)),"LineWidth",2);   % ,bar5x,bar5y not plotted
+            plot(real(links(:,:,t)), imag(links(:,:,t)),"LineWidth",2);
         else
-        h{t} = plot(xlinks(:,:,t), ylinks(:,:,t),"b*-","LineWidth",2);
-        set(h{t}(rocker_links),"Color",[0,.75,.5]);% = repmat([1 0 0],length(pullrod_linkage),1);    % Color the pullrod linkage
-%             set(h{t}(secondary_pullrod_linkage),"Color",[0,.5,1]);
-        set(h{t}(pullrod),"Color",[1,0,0])
+            h{t} = plot(xlinks(:,:,t), ylinks(:,:,t),"b*-","LineWidth",2);
+            set(h{t}(rocker_links'),"Color",[0,.75,.5]);% = repmat([1 0 0],length(pullrod_linkage),1);    % Color the pullrod linkage
+    %             set(h{t}(secondary_pullrod_linkage),"Color",[0,.5,1]);
+            set(h{t}(shock_idx),"Color",[1,0,0])
+            set(h{t}(pullrod_idx'),"Color",[1,0,0])
         end
         
         if drawlabels
-        % Label vectors at midpoint
-            text(midpts(1,labelledVecs(LVecs),t),midpts(2,labelledVecs(LVecs),t),...
-                vecLabels(labelledVecs(LVecs)),LTxtOps{:});   % odd vectors
-            text(midpts(1,labelledVecs(RVecs),t),midpts(2,labelledVecs(RVecs),t),...
-                vecLabels(labelledVecs(RVecs)),RTxtOps{:});   % odd vectors
+        % Label vectors at midpoint & label pts
+            text(XL(:,t), YL(:,t), LLabels, LTxtOps{:});
+            text(XR(:,t), YR(:,t), RLabels, RTxtOps{:});
         end
 
         axis equal   % Equal scale of x and y-axis 
@@ -491,16 +504,18 @@ if plotlinkage || plotslice
 end
 
 %%
-figure(7)
-title("Rocker Linkage Angle vs idx ")
-hold on
-plot(1:length(R5),VTh5*R2D);
-plot(1:length(R5),VTh6*R2D);
-plot(1:length(R5),VTh7*R2D);
-plot(1:length(R5),(VTh7-VTh9)*R2D);
-legend("Th5","Th6","Th7","Th7->Th9")
-hold off
-% xlim([1, length(R5)*3.5])
+if stretching
+    figure(7)
+    title("Rocker Linkage Angle vs idx ")
+    hold on
+    plot(1:length(R5),VTh5*R2D);
+    plot(1:length(R5),VTh6*R2D);
+    plot(1:length(R5),VTh7*R2D);
+    plot(1:length(R5),(VTh7-VTh9)*R2D);
+    legend("Th5","Th6","Th7","Th7->Th9")
+    hold off
+    % xlim([1, length(R5)*3.5])
+end
 
 %% Fxns
 function [] = Rocker_Range(VTh7, O_R, shock_mount_pos, bump, rocker_link_angle, r_rocker_shockside)
@@ -516,28 +531,29 @@ function [] = Rocker_Range(VTh7, O_R, shock_mount_pos, bump, rocker_link_angle, 
     r_shock = linspace(r_rocker_shockside - 10,r_rocker_shockside + 10, num_changes);        % The radius from the rocker axis to the shock hole
     
     
-%   This section iterates over an array change_vals which contains values for each optimization variable. Each "slice" 
-%   in the third dimension represents a different set of changes. 
+%   This section iterates over an array ((change_vals)) containing values for each optimization variable.
+%   Each "slice" in the third dimension represents a different set of changes. 
+%
 %   For example, using the array below will plot the motion ratio vs. a varying rocker angle in the 1st iter, then a
 %   varying r_shock in the 2nd iter.
-%       change_vals = [mean(r_shock)*ones(size(rock_angle)); rock_angle];     % constant shock radius, varying rocker angle
+%       change_vals =        [mean(r_shock)*ones(size(rock_angle)); rock_angle];     % constant shock radius, varying rocker angle
 %       change_vals(:,:,2) = [mean(rock_angle)*ones(size(r_shock)); r_shock];
 
 %       optimization variables: [r_rocker_shockside, rocker angle]
-    change_vals =        [untouched_r_rocker_shockside*ones(size(rock_angle)); rock_angle];     % constant shock radius, varying rocker angle
-    change_vals(:,:,2) = [r_shock;                              untouched_rocker_link_angle*ones(size(r_shock))];   % const. 
+    change_vals(:,:,1) = [untouched_r_rocker_shockside*ones(size(rock_angle)); rock_angle];                         % constant shock radius, varying rocker angle
+    change_vals(:,:,2) = [r_shock;                              untouched_rocker_link_angle*ones(size(r_shock))];   % varying shock radius, const. rocker angle
     
     clf % clear current figure
-    changevars = 2; % number of variables to plot over
+    changevars = size(change_vals,3); % number of slices/changed values to plot over
     for iter = 1:changevars
         subplot(2,1,iter)
         hold on
         for i = 1:length(change_vals)
             % Iterate variables
-            r_rocker_shockside = change_vals(1,i,iter);
-            rocker_link_angle = change_vals(2,i,iter);    % the angle between the two rocker links
+            r_rocker_shockside = change_vals(1,i,iter);     % Distance from rocker origin to rocker shock attachment point
+            rocker_link_angle = change_vals(2,i,iter);      % the angle between the two rocker links
             
-            % Recalculate results
+            % Recalculate motion ratio
             R9 = exp(1i*(rocker_link_angle*D2R - (pi - VTh7))) .* r_rocker_shockside;     % Rocker Shock-Side link
             G = O_R + R9;
             shock_length = ( real(shock_mount_pos - G).^2 + imag(shock_mount_pos - G).^2 ).^ 0.5;
@@ -546,24 +562,26 @@ function [] = Rocker_Range(VTh7, O_R, shock_mount_pos, bump, rocker_link_angle, 
             motion_ratio = abs(spring_dx) ./ abs(bump_velocity);
             
             % plot
-            plot(bump(2:end),motion_ratio)
+            plot(bump(2:end),motion_ratio,"linewidth",2)
             grid on
         end
         xticks(0-60:10:60)%, yticks(linspace( (round(min(spring_velocity),1,"significant")), max(spring_velocity) ,10 ) )
         
         if iter == 1
             legend(string(round(change_vals(2,:,iter),3,"significant") ) + " deg")
-            title("MR v. Wheel Disp. - Varying rocker angle")
+            title("Motion Ratio v. Wheel Disp. - Varying rocker angle")
         elseif iter == 2
 %             change_vals = [r_shock; 110*ones(size(r_shock))];
             legend(string(round(change_vals(1,:,iter),3,"significant") ) + " mm")
-            title("MR v. Wheel Disp. - Varying shock rocker radius")
+            title("Motion Ratio v. Wheel Disp. - Varying shock rocker radius")
 %         elseif iter == 3
         end
     end
     
-    rocker_link_angle = untouched_rocker_link_angle;
-    r_rocker_shockside = untouched_r_rocker_shockside;
+    % Reset variables to prevent variables in the main_analysis script body from getting overwritten.
+    %       This is only needed if the function body is copied and used somewhere in the main script.
+%     rocker_link_angle = untouched_rocker_link_angle;
+%     r_rocker_shockside = untouched_r_rocker_shockside;
 end
 
 
